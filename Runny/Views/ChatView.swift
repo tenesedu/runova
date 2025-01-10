@@ -272,3 +272,5 @@ struct Conversation: Identifiable {
     let unreadCount: Int
     var otherUserProfile: UserProfile?
 } 
+
+

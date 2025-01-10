@@ -13,6 +13,7 @@ struct Run: Identifiable {
     let terrain: String
     let createdBy: String
     let createdAt: Date
+    let title: String
     
     init(id: String, data: [String: Any]) {
         self.id = id
@@ -27,5 +28,6 @@ struct Run: Identifiable {
         self.terrain = data["terrain"] as? String ?? ""
         self.createdBy = data["createdBy"] as? String ?? ""
         self.createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+        self.title = data["title"] as? String ?? ""
     }
 } 

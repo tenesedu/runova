@@ -1,131 +1,164 @@
 import SwiftUI
+import FirebaseFirestore
+import FirebaseAuth
 
 struct InterestCarousel: View {
     let interests: [Interest]
-    @State private var showingAllInterests = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            HStack {
-                Text("Running Interests")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                Spacer()
-                
-                Button(action: {
-                    showingAllInterests = true
-                }) {
-                    HStack(spacing: 4) {
-                        Text("View All")
-                            .font(.subheadline)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14))
-                    }
-                    .foregroundColor(.blue)
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(spacing: 15) {
+                ForEach(interests) { interest in
+                    InterestCard(interest: interest)
+                        .frame(width: 280)
                 }
             }
             .padding(.horizontal)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 15) {
-                    ForEach(interests.prefix(4)) { interest in
-                        InterestCard(interest: interest)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 5)
-            }
-        }
-        .sheet(isPresented: $showingAllInterests) {
-            AllInterestsView(interests: interests)
+            .padding(.bottom, 5)
         }
     }
 }
 
 struct InterestCard: View {
     let interest: Interest
-    @State private var backgroundImage: UIImage?
-    @State private var isHovered = false
+    @State private var isFollowing: Bool
+    @State private var followersCount: Int
+    let cardWidth: CGFloat = 280
+    let cardHeight: CGFloat = 180
+    
+    init(interest: Interest) {
+        self.interest = interest
+        self._isFollowing = State(initialValue: interest.isFollowed)
+        self._followersCount = State(initialValue: interest.followersCount)
+    }
     
     var body: some View {
-        ZStack {
-            // Background Image
-            if let image = backgroundImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 160, height: 200)
+        ZStack(alignment: .bottomLeading) {
+            // Navigation Link for the whole card except the follow button
+            NavigationLink(destination: InterestDetailView(interest: interest)) {
+                ZStack(alignment: .bottomLeading) {
+                    // Background Image
+                    AsyncImage(url: URL(string: interest.backgroundImageUrl)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Color.gray
+                    }
+                    .frame(width: cardWidth, height: cardHeight)
                     .clipped()
-                    .cornerRadius(24) // Rounded corners
-            }
-            
-            // Overlay for better contrast
-            Color.black.opacity(0.4) // Semi-transparent overlay
-            
-            // Content
-            VStack(spacing: 20) {
-                // Icon Circle with Glass Effect
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.2))
-                        .frame(width: 70, height: 70)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                        )
-                        .background(
-                            Circle()
-                                .fill(Color.white.opacity(0.1))
-                                .blur(radius: 4)
-                        )
                     
-                    Image(systemName: interest.iconName)
-                        .font(.system(size: 32, weight: .light))
-                        .foregroundColor(.white)
-                }
-                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
-                
-                // Title
-                Text(interest.name)
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.white.opacity(0.15))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                            )
+                    // Gradient Overlay
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.7)],
+                        startPoint: .top,
+                        endPoint: .bottom
                     )
-                    .shadow(color: Color.black.opacity(0.05), radius: 4)
+                }
             }
-            .padding()
+            .buttonStyle(PlainButtonStyle())
+            
+            // Content overlay
+            VStack(alignment: .leading, spacing: 12) {
+                // Title and Followers Row
+                HStack(alignment: .center) {
+                    // Icon and Title
+                    HStack(spacing: 8) {
+                        Image(systemName: interest.iconName)
+                            .font(.title3)
+                            .foregroundColor(interest.color)
+                        
+                        Text(interest.name)
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
+                    
+                    Spacer()
+                    
+                    // Followers Count
+                    Text("\(followersCount) followers")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                
+                // Follow Button
+                Button(action: {
+                    toggleFollow()
+                }) {
+                    Text(isFollowing ? "Following" : "Follow")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(isFollowing ? interest.color.opacity(0.2) : interest.color)
+                        .foregroundColor(isFollowing ? interest.color : .white)
+                        .clipShape(Capsule())
+                }
+            }
+            .padding(16)
         }
-        .frame(width: 160, height: 200)
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 6)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .scaleEffect(isHovered ? 1.03 : 1.0)
+        .frame(width: cardWidth, height: cardHeight)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .shadow(radius: 5)
         .onAppear {
-            loadBackgroundImage()
+            checkFollowStatus()
         }
     }
     
-    private func loadBackgroundImage() {
-        guard let url = URL(string: interest.backgroundImageUrl) else { return }
+    private func checkFollowStatus() {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
         
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            if let data = data, let image = UIImage(data: data) {
-                DispatchQueue.main.async {
-                    self.backgroundImage = image
+        let db = Firestore.firestore()
+        db.collection("interests").document(interest.id)
+            .collection("followers").document(userId)
+            .getDocument { snapshot, error in
+                if let error = error {
+                    print("Error checking follow status: \(error.localizedDescription)")
+                    return
                 }
+                isFollowing = snapshot?.exists ?? false
             }
-        }.resume()
     }
-} 
+    
+    private func toggleFollow() {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        
+        let db = Firestore.firestore()
+        let interestRef = db.collection("interests").document(interest.id)
+        let followerRef = interestRef.collection("followers").document(userId)
+        
+        // Optimistically update UI
+        isFollowing.toggle()
+        followersCount += isFollowing ? 1 : -1
+        
+        if isFollowing {
+            // Follow
+            followerRef.setData(["timestamp": FieldValue.serverTimestamp()]) { error in
+                if let error = error {
+                    print("Error following interest: \(error.localizedDescription)")
+                    isFollowing.toggle()
+                    followersCount -= 1
+                    return
+                }
+                
+                interestRef.updateData([
+                    "followersCount": FieldValue.increment(Int64(1))
+                ])
+            }
+        } else {
+            // Unfollow
+            followerRef.delete { error in
+                if let error = error {
+                    print("Error unfollowing interest: \(error.localizedDescription)")
+                    isFollowing.toggle()
+                    followersCount += 1
+                    return
+                }
+                
+                interestRef.updateData([
+                    "followersCount": FieldValue.increment(Int64(-1))
+                ])
+            }
+        }
+    }
+}

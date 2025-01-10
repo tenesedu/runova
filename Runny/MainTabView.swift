@@ -7,33 +7,34 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem {
-                    Label("Home", systemImage: "house.fill")
+                    Image(systemName: "house.fill")
                 }
                 .tag(0)
             
-            ExploreView()
+            FeedView()
                 .tabItem {
-                    Label("Explore", systemImage: "map.fill")
+                    Image(systemName: "map.fill")
                 }
                 .tag(1)
             
             RunsView()
                 .tabItem {
-                    Label("My Runs", systemImage: "figure.run")
+                    Image(systemName: "figure.run")
                 }
                 .tag(2)
             
             MapView()
                 .tabItem {
-                    Label("Map", systemImage: "map.fill")
+                    Image(systemName: "globe")
                 }
                 .tag(3)
             
             ChatView()
                 .tabItem {
-                    Label("Chat", systemImage: "message.fill")
+                    Image(systemName: "message.fill")
                 }
                 .tag(4)
         }
+        .accentColor(.black)
     }
 } 

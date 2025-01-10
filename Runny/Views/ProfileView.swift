@@ -14,6 +14,7 @@ struct ProfileView: View {
     @State private var goals: [String] = []
     @State private var interests: [String] = []
     @State private var isEditing = false
+    @AppStorage("selectedLanguage") private var selectedLanguage = "en"
     
     var body: some View {
         NavigationView {
@@ -89,9 +90,33 @@ struct ProfileView: View {
                             )
                     }
                     .padding(.horizontal)
+                    
+                    // Language Selection Section
+                    Section(header: Text("Language".localized)) {
+                        HStack(spacing: 20) {
+                            // English Flag Button
+                            LanguageButton(
+                                flag: "🇺🇸",
+                                language: "English",
+                                isSelected: selectedLanguage == "en"
+                            ) {
+                                selectedLanguage = "en"
+                            }
+                            
+                            // Spanish Flag Button
+                            LanguageButton(
+                                flag: "🇪🇸",
+                                language: "Español",
+                                isSelected: selectedLanguage == "es"
+                            ) {
+                                selectedLanguage = "es"
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
                 }
             }
-            .navigationTitle("Profile")
+            .navigationTitle("Profile".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -192,6 +217,38 @@ struct ProfileView: View {
                 }
             }
         }.resume()
+    }
+}
+
+// New Language Button Component
+struct LanguageButton: View {
+    let flag: String
+    let language: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Text(flag)
+                    .font(.system(size: 40))
+                
+                Text(language)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(isSelected ? .black : .gray)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.black : Color.gray.opacity(0.3), lineWidth: 2)
+            )
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? Color.black.opacity(0.05) : Color.clear)
+            )
+        }
     }
 }
 

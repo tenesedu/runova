@@ -2,6 +2,7 @@ import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
 import PhotosUI
+import FirebaseStorage
 
 struct OnboardingView: View {
     @Environment(\.dismiss) private var dismiss
@@ -18,6 +19,8 @@ struct OnboardingView: View {
     @State private var navigateToMain = false
     @State private var selectedImage: UIImage?
     @State private var isImagePickerPresented = false
+    @State private var isUploading = false
+    @State private var selectedAge: Int = 18 // Default age
     
     let genderOptions = ["Male", "Female", "Other", "Prefer not to say"]
     let availableInterests = ["Trail Running", "Ultra Running", "Marathon", "10km Runs", "5km Runs", "Social Running", "Fun Running", "Sprinting", "Track Running", "Networking"]
@@ -26,7 +29,7 @@ struct OnboardingView: View {
     var body: some View {
         NavigationStack {
             TabView(selection: $currentTab) {
-                // Age
+                // Age Selection
                 onboardingPage {
                     Text("How old are you?")
                         .font(.system(size: 36, weight: .bold))
@@ -36,15 +39,14 @@ struct OnboardingView: View {
                     
                     Spacer()
                     
-                    TextField("Enter your age", text: $age)
-                        .keyboardType(.numberPad)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding(.horizontal)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: .gray.opacity(0.2), radius: 10)
-                        )
+                    // Age Picker
+                    Picker("Select Age", selection: $selectedAge) {
+                        ForEach(0..<101) { age in // Age range from 0 to 100
+                            Text("\(age)").tag(age)
+                        }
+                    }
+                    .pickerStyle(WheelPickerStyle())
+                    .frame(height: 150) // Adjust height for better visibility
                     
                     Spacer()
                     
@@ -315,18 +317,39 @@ struct OnboardingView: View {
         }
     }
     
+    private func handleImageSelection(_ image: UIImage?) {
+        guard let image = image else { return }
+        selectedImage = image
+    }
+    
     private func completeOnboarding() {
+        isUploading = true
+        
         guard let userId = Auth.auth().currentUser?.uid else {
-            alertMessage = "User not found"
-            showAlert = true
+            print("No user ID found")
             return
         }
         
+        // If an image was selected, upload it first
+        if let image = selectedImage {
+            StorageManager.shared.uploadProfileImage(image, userId: userId) { imageUrl in
+                saveUserProfile(imageUrl: imageUrl)
+            }
+        } else {
+            // No image selected, proceed with nil image URL
+            saveUserProfile(imageUrl: nil)
+        }
+    }
+    
+    private func saveUserProfile(imageUrl: String?) {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        
+        let db = Firestore.firestore()
         let userData: [String: Any] = [
             "age": age,
             "gender": gender,
             "city": city,
-            "profileImageUrl": profileImageUrl,
+            "profileImageUrl": imageUrl ?? "",
             "goals": goals,
             "interests": interests,
             "locationEnabled": locationEnabled,
@@ -334,15 +357,25 @@ struct OnboardingView: View {
             "createdAt": Date()
         ]
         
-        let db = Firestore.firestore()
         db.collection("users").document(userId).updateData(userData) { error in
+            isUploading = false
+            
             if let error = error {
-                alertMessage = "Error saving data: \(error.localizedDescription)"
-                showAlert = true
-            } else {
+                print("Error saving user data: \(error.localizedDescription)")
+                return
+            }
+            
+            // Complete onboarding
+            withAnimation {
                 navigateToMain = true
             }
         }
+    }
+    
+    private func requestLocationPermission() {
+        // Request location permission
+        let locationManager = CLLocationManager()
+        locationManager.requestWhenInUseAuthorization()
     }
 }
 

@@ -1,0 +1,37 @@
+// General
+"Profile" = "Perfil";
+"Language" = "Idioma";
+"English" = "Inglés";
+"Spanish" = "Español";
+"Preferences" = "Preferencias";
+
+// Home View
+"Hello" = "Hola";
+"Runners Near You" = "Corredores Cerca";
+"Create Run" = "Crear Carrera";
+"Join Run" = "Unirse a Carrera";
+"No runners found" = "No se encontraron corredores";
+"There are no runners in your area yet" = "Aún no hay corredores en tu área";
+
+// Interest Related
+"followers" = "seguidores";
+"Following" = "Siguiendo";
+"Follow" = "Seguir";
+"Popular Interests" = "Intereses Populares";
+"See All" = "Ver Todo";
+
+// Feed View
+"Feed" = "Actividad";
+"All" = "Todo";
+
+// Chat View
+"Chats" = "Chats";
+"No messages yet" = "No hay mensajes aún";
+"Yesterday" = "Ayer";
+
+// Buttons & Actions
+"Save" = "Guardar";
+"Cancel" = "Cancelar";
+"Done" = "Listo";
+"Edit" = "Editar";
+"Delete" = "Eliminar"; 

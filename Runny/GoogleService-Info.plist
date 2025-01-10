@@ -28,5 +28,9 @@
 	<string>1:273474289169:ios:ddd38148163cb55e1bbbb0</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We need your location to show you nearby runners</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We need your location to show you nearby runners and update your location for other runners</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photos to set your profile picture.</string>
 </dict>
 </plist>

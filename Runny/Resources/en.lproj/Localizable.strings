@@ -1,0 +1,37 @@
+// General
+"Profile" = "Profile";
+"Language" = "Language";
+"English" = "English";
+"Spanish" = "Spanish";
+"Preferences" = "Preferences";
+
+// Home View
+"Hello" = "Hello";
+"Runners Near You" = "Runners Near You";
+"Create Run" = "Create Run";
+"Join Run" = "Join Run";
+"No runners found" = "No runners found";
+"There are no runners in your area yet" = "There are no runners in your area yet";
+
+// Interest Related
+"followers" = "followers";
+"Following" = "Following";
+"Follow" = "Follow";
+"Popular Interests" = "Popular Interests";
+"See All" = "See All";
+
+// Feed View
+"Feed" = "Feed";
+"All" = "All";
+
+// Chat View
+"Chats" = "Chats";
+"No messages yet" = "No messages yet";
+"Yesterday" = "Yesterday";
+
+// Buttons & Actions
+"Save" = "Save";
+"Cancel" = "Cancel";
+"Done" = "Done";
+"Edit" = "Edit";
+"Delete" = "Delete"; 
