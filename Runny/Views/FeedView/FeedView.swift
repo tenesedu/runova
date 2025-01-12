@@ -7,57 +7,94 @@ struct FeedView: View {
     @State private var showingNewPost = false
     @State private var selectedInterest: String?
     @State private var interests: [Interest] = []
+    @State private var searchText = ""
     
     var filteredPosts: [Post] {
-        if let interest = selectedInterest {
-            return posts.filter { $0.interest == interest }
+        let interestFiltered = selectedInterest == nil ? posts : posts.filter { $0.interest == selectedInterest }
+        
+        if searchText.isEmpty {
+            return interestFiltered
         }
-        return posts
+        return interestFiltered.filter { post in
+            post.content.localizedCaseInsensitiveContains(searchText) ||
+            post.userName.localizedCaseInsensitiveContains(searchText)
+        }
     }
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Interests Filter
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        // All Filter Button
-                        Button(action: {
-                            selectedInterest = nil // Reset to show all posts
-                        }) {
-                            Text("All")
-                                .padding()
-                                .background(selectedInterest == nil ? Color.blue.opacity(0.2) : Color.gray.opacity(0.2))
-                                .foregroundColor(selectedInterest == nil ? .blue : .primary)
-                                .clipShape(Capsule())
-                        }
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Search Bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.gray)
+                        TextField("Search posts...", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
                         
-                        ForEach(interests) { interest in
-                            InterestFilterButton(
-                                interest: interest,
-                                isSelected: selectedInterest == interest.name
-                            ) {
-                                if selectedInterest == interest.name {
-                                    selectedInterest = nil
-                                } else {
-                                    selectedInterest = interest.name
-                                }
+                        if !searchText.isEmpty {
+                            Button(action: {
+                                searchText = ""
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.gray)
                             }
                         }
                     }
                     .padding()
-                }
-                
-                // Posts List
-                ScrollView {
-                    LazyVStack(spacing: 16) {
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white)
+                            .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    )
+                    .padding(.horizontal)
+                    
+                    // Interests Filter
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            // All Filter Button
+                            Button(action: {
+                                selectedInterest = nil // Reset to show all posts
+                            }) {
+                                Text("All")
+                                    .padding()
+                                    .background(selectedInterest == nil ? Color.black : Color.gray.opacity(0.2))
+                                    .foregroundColor(selectedInterest == nil ? .white : .primary)
+                                    .clipShape(Capsule())
+                            }
+                            
+                            ForEach(interests) { interest in
+                                InterestFilterButton(
+                                    interest: interest,
+                                    isSelected: selectedInterest == interest.name
+                                ) {
+                                    if selectedInterest == interest.name {
+                                        selectedInterest = nil
+                                    } else {
+                                        selectedInterest = interest.name
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                    
+                    // Posts List
+                    if filteredPosts.isEmpty {
+                        EmptyStateView(
+                            message: searchText.isEmpty ? "No posts yet" : "No results found",
+                            systemImage: "text.bubble",
+                            description: searchText.isEmpty ? "Be the first to share something!" : "Try adjusting your search"
+                        )
+                    } else {
                         ForEach(filteredPosts) { post in
                             PostCard(post: post)
+                                .padding(.horizontal)
                         }
                     }
-                    .padding()
                 }
             }
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Feed")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

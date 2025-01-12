@@ -15,6 +15,7 @@ struct ProfileView: View {
     @State private var interests: [String] = []
     @State private var isEditing = false
     @AppStorage("selectedLanguage") private var selectedLanguage = "en"
+    var userId: String? = nil // nil means current user
     
     var body: some View {
         NavigationView {

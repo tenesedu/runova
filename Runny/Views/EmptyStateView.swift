@@ -1,3 +1,10 @@
+//
+//  EmptyStateView.swift
+//  Runny
+//
+//  Created by Joaquín Tenés on 12/1/25.
+//
+
 import SwiftUI
 
 struct EmptyStateView: View {
@@ -34,4 +41,4 @@ struct EmptyStateView: View {
         }
         .padding()
     }
-} 
+}

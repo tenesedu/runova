@@ -8,11 +8,67 @@ struct RunsView: View {
     @State private var allRuns: [Run] = []
     @State private var selectedSegment = 0
     @State private var showingCreateRun = false
+    @State private var searchText = ""
+    @State private var isRefreshing = false
+    
+    var filteredAllRuns: [Run] {
+        if searchText.isEmpty {
+            return allRuns
+        }
+        return allRuns.filter { run in
+            run.name.localizedCaseInsensitiveContains(searchText) ||
+            run.location.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+    
+    var filteredJoinedRuns: [Run] {
+        if searchText.isEmpty {
+            return joinedRuns
+        }
+        return joinedRuns.filter { run in
+            run.name.localizedCaseInsensitiveContains(searchText) ||
+            run.location.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+    
+    var filteredCreatedRuns: [Run] {
+        if searchText.isEmpty {
+            return createdRuns
+        }
+        return createdRuns.filter { run in
+            run.name.localizedCaseInsensitiveContains(searchText) ||
+            run.location.localizedCaseInsensitiveContains(searchText)
+        }
+    }
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
+                    // Search Bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.gray)
+                        TextField("Search runs...", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                        
+                        if !searchText.isEmpty {
+                            Button(action: {
+                                searchText = ""
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white)
+                            .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    )
+                    .padding(.horizontal)
+                    
                     // Segment Control
                     Picker("Run Type", selection: $selectedSegment) {
                         Text("All").tag(0)
@@ -26,40 +82,43 @@ struct RunsView: View {
                     VStack(spacing: 15) {
                         switch selectedSegment {
                         case 0: // All Runs
-                            if allRuns.isEmpty {
+                            if filteredAllRuns.isEmpty {
                                 EmptyStateView(
-                                    message: "No runs available",
+                                    message: searchText.isEmpty ? "No runs available" : "No results found",
                                     systemImage: "figure.run.circle",
-                                    description: "Be the first to create a run!"
+                                    description: searchText.isEmpty ? "Be the first to create a run!" : "Try adjusting your search"
                                 )
                             } else {
-                                ForEach(allRuns) { run in
+                                ForEach(filteredAllRuns) { run in
                                     RunCardView(run: run)
-                                        .padding(.horizontal)
+                                        .padding(.horizontal, 16)
+                                        .onTapGesture {
+                                            print("Tapped run with ID: \(run.id)")
+                                        }
                                 }
                             }
                         case 1: // Joined Runs
-                            if joinedRuns.isEmpty {
+                            if filteredJoinedRuns.isEmpty {
                                 EmptyStateView(
-                                    message: "You haven't joined any runs yet",
+                                    message: searchText.isEmpty ? "You haven't joined any runs yet" : "No results found",
                                     systemImage: "figure.run.circle"
                                 )
                             } else {
-                                ForEach(joinedRuns) { run in
+                                ForEach(filteredJoinedRuns) { run in
                                     RunCardView(run: run)
-                                        .padding(.horizontal)
+                                        .padding(.horizontal, 16)
                                 }
                             }
                         case 2: // Created Runs
-                            if createdRuns.isEmpty {
+                            if filteredCreatedRuns.isEmpty {
                                 EmptyStateView(
-                                    message: "You haven't created any runs yet",
+                                    message: searchText.isEmpty ? "You haven't created any runs yet" : "No results found",
                                     systemImage: "figure.run.circle"
                                 )
                             } else {
-                                ForEach(createdRuns) { run in
+                                ForEach(filteredCreatedRuns) { run in
                                     RunCardView(run: run)
-                                        .padding(.horizontal)
+                                        .padding(.horizontal, 16)
                                 }
                             }
                         default:
@@ -68,8 +127,12 @@ struct RunsView: View {
                     }
                 }
             }
+            .refreshable {
+                await refreshData()
+            }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Runs")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -77,7 +140,7 @@ struct RunsView: View {
                     }) {
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 22))
-                            .foregroundColor(.blue)
+                            .foregroundColor(.black)
                     }
                 }
             }
@@ -132,5 +195,36 @@ struct RunsView: View {
                 joinedRuns = documents.map { Run(id: $0.documentID, data: $0.data()) }
                     .filter { $0.createdBy != userId } // Exclude runs created by the user
             }
+    }
+    
+    private func refreshData() async {
+        await MainActor.run {
+            fetchRuns()
+        }
+    }
+}
+
+struct RefreshableScrollView<Content: View>: View {
+    var action: () async -> Void
+    var content: Content
+    
+    init(action: @escaping () async -> Void, @ViewBuilder content: () -> Content) {
+        self.action = action
+        self.content = content()
+    }
+    
+    var body: some View {
+        if #available(iOS 15.0, *) {
+            ScrollView {
+                content
+            }
+            .refreshable {
+                await action()
+            }
+        } else {
+            ScrollView {
+                content
+            }
+        }
     }
 } 

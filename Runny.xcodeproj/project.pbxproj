@@ -39,7 +39,7 @@
 		F654C77D2D30FA2600F47652 /* Exceptions for "Runny" folder in "Runny" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Info.plist,
+				"Info /Info.plist",
 			);
 			target = F68615482D2D285C002018E6 /* Runny */;
 		};

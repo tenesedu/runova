@@ -89,7 +89,7 @@ struct EditProfileView: View {
                             }
                         }
                         .pickerStyle(WheelPickerStyle())
-                        .frame(width: 45)
+                        .frame(width: 45, height: 80)
                         .clipped()
                     }
                     

@@ -14,14 +14,14 @@
 "There are no runners in your area yet" = "There are no runners in your area yet";
 
 // Interest Related
-"followers" = "followers";
-"Following" = "Following";
-"Follow" = "Follow";
+"followers" = "seguidores";
+"Following" = "Siguiendo";
+"Follow" = "Seguir";
 "Popular Interests" = "Popular Interests";
 "See All" = "See All";
 
 // Feed View
-"Feed" = "Feed";
+"Feed" = "Actividad";
 "All" = "All";
 
 // Chat View
