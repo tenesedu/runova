@@ -511,33 +511,27 @@ struct ActionButton: View {
     let icon: String
     let backgroundColor: Color
     var isOutlined: Bool = false
-    
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 20, weight: .semibold))
-            
+                .foregroundColor(isOutlined ? .black : .white)
             Text(title)
                 .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(isOutlined ? .black : .white)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 50)
         .background(
-            Group {
-                if isOutlined {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.black, lineWidth: 1.5)
-                        .background(backgroundColor)
-                } else {
-                    backgroundColor
-                }
-            }
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isOutlined ? backgroundColor : backgroundColor)
         )
-        .foregroundColor(isOutlined ? .black : .white)
+        
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(isOutlined ? 0.05 : 0.1),
-                radius: isOutlined ? 4 : 8,
+        .shadow(color: .black.opacity(0.1),
+                radius: 8,
                 x: 0,
-                y: isOutlined ? 2 : 4)
+                y: 4)
     }
-} 
+}
