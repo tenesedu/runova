@@ -53,7 +53,7 @@ struct MapView: View {
                 if let location = locationManager.location,
                    let currentUserId = Auth.auth().currentUser?.uid,
                    let currentUser = users.first(where: { $0.id == currentUserId }) {
-                    Annotation("",coordinate: location.coordinate) {
+                    Annotation("", coordinate: location.coordinate) {
                         UserMapMarker(user: currentUser) {
                             selectedUser = currentUser
                             showingUserProfile = true
@@ -65,7 +65,7 @@ struct MapView: View {
                 ForEach(runnersWithin25km) { user in
                     if let userLocation = user.locationAsCLLocation(),
                        user.id != Auth.auth().currentUser?.uid {
-                        Annotation("",coordinate: userLocation.coordinate) {
+                        Annotation("", coordinate: userLocation.coordinate) {
                             UserMapMarker(user: user) {
                                 selectedUser = user
                                 showingUserProfile = true
@@ -135,17 +135,20 @@ struct MapView: View {
         .onAppear {
         
             locationManager.requestLocation()
-            startListeningToUsers()
+            if users.isEmpty {
+                startListeningToUsers()
+            }
         }
-        .sheet(isPresented: $showingUserProfile) {
-            if let user = selectedUser {
+        .sheet(item: $selectedUser) { user in
+           
                 NavigationView {
                     RunnerDetailView(runner: Runner(user: user))
                         .navigationBarItems(trailing: Button("Done") {
                             showingUserProfile = false
+                            selectedUser = nil
                         })
                 }
-            }
+            
         }
         .alert("Location Access Required", 
                isPresented: .constant(!locationManager.isLocationEnabled && locationManager.authorizationStatus != .notDetermined)) {
@@ -274,57 +277,52 @@ struct MapView: View {
         let action: () -> Void
         @State private var profileImage: UIImage?
         
-        private var isCurrentUser: Bool {
+        var isCurrentUser: Bool {
             user.id == Auth.auth().currentUser?.uid
         }
         
         var body: some View {
-            Button(action: action) {
-                VStack(spacing: 4) {
-                    // Profile Image
-                    Group {
-                        if let profileImage = profileImage {
-                            Image(uiImage: profileImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } else {
-                            AsyncImage(url: URL(string: user.profileImageUrl)) { image in
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                            } placeholder: {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.3))
-                                    .overlay(
-                                        Image(systemName: "person.fill")
-                                            .foregroundColor(.white)
-                                    )
-                            }
-                        }
-                    }
-                    .frame(width: 50, height: 50)
-                    .clipShape(Circle())
-                    .overlay(
+            VStack(spacing: 4) {
+                // Profile Image
+                Group {
+                    if let profileImage = profileImage {
+                        Image(uiImage: profileImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
                         Circle()
-                            .stroke(isCurrentUser ? Color.blue : Color.white, lineWidth: 3)
-                    )
-                    .shadow(radius: 3)
-                    
-                    // Name Label
-                    Text(isCurrentUser ? "You" : user.name)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.black)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(Color.white)
-                                .shadow(radius: 1)
-                        )
+                            .fill(Color.gray.opacity(0.3))
+                            .overlay(
+                                Image(systemName: "person.fill")
+                                    .foregroundColor(.white)
+                            )
+                    }
                 }
+                .frame(width: 40, height: 40)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(isCurrentUser ? Color.blue : Color.white, lineWidth: 3)
+                )
+                .shadow(radius: 3)
+                
+                // Name Label
+                Text(isCurrentUser ? "You" : user.name)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(Color.white)
+                            .shadow(radius: 1)
+                    )
             }
-            .buttonStyle(PlainButtonStyle())
+            .contentShape(Rectangle()) // Makes the entire area tappable
+            .onTapGesture {
+                action()
+            }
             .onAppear {
                 loadProfileImage()
             }
@@ -413,7 +411,7 @@ struct MapView: View {
         
         var body: some View {
             VStack(spacing: 0) {
-                // Header with expand/collapse button
+                // Header
                 HStack {
                     Text("\(runnersWithin25km.count) Runners Nearby")
                         .font(.system(size: 18, weight: .bold))
@@ -421,19 +419,31 @@ struct MapView: View {
                     
                     Spacer()
                     
-                    Button(action: {
-                        withAnimation {
-                            isExpanded.toggle()
+                    if !runnersWithin25km.isEmpty {
+                        Button(action: {
+                            withAnimation {
+                                isExpanded.toggle()
+                            }
+                        }) {
+                            Image(systemName: isExpanded ? "chevron.down" : "chevron.up")
+                                .foregroundColor(.gray)
                         }
-                    }) {
-                        Image(systemName: isExpanded ? "chevron.down" : "chevron.up")
-                            .foregroundColor(.gray)
                     }
                 }
                 .padding(.horizontal)
                 .padding(.top, 12)
                 
-                if !runnersWithin25km.isEmpty {
+                // Content
+                if runnersWithin25km.isEmpty {
+                    HStack {
+                        Spacer()
+                        Text("No runners in your area")
+                            .font(.system(size: 14))
+                            .foregroundColor(.gray)
+                        Spacer()
+                    }
+                    .padding(.vertical, 20)
+                } else {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 16) {
                             ForEach(runnersWithin25km) { user in
@@ -445,17 +455,13 @@ struct MapView: View {
                         .padding(.horizontal)
                         .padding(.vertical, 12)
                     }
-                } else {
-                    Spacer()
-                        .frame(height: 12)
                 }
             }
             .background(
                 Rectangle()
                     .fill(.ultraThinMaterial)
-                    
             )
-            .frame(height: runnersWithin25km.isEmpty ? 80 : (isExpanded ? 340 : 180))
+            .frame(height: runnersWithin25km.isEmpty ? 160 : (isExpanded ? 340 : 180)) // Increased minimum height
         }
     }
     
