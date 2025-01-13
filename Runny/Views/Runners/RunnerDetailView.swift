@@ -42,7 +42,7 @@ struct RunnerDetailView: View {
                 }
                 .padding(.bottom)
                 
-                // User Info Section
+                // Runner Info Section
                 VStack(spacing: 20) {
                     Text(runner.name)
                         .font(.system(size: 28, weight: .bold))
@@ -226,7 +226,7 @@ struct RunnerDetailView: View {
                 }
                 
                 if let documents = snapshot?.documents {
-                    // Look for existing conversation with this user
+                    // Look for existing conversation with this runner
                     let existingConversation = documents.first { document in
                         let data = document.data()
                         let participants = data["participants"] as? [String] ?? []
@@ -294,4 +294,6 @@ struct RunnerDetailView: View {
                 }
             }
     }
-} 
+}
+
+        

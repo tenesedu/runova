@@ -6,78 +6,219 @@ import CoreLocation
 
 struct MapView: View {
     @StateObject private var locationManager = LocationManager()
-    @State private var region = MKCoordinateRegion()
+    @State private var position: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var users: [User] = []
     @State private var showingUserProfile = false
     @State private var selectedUser: User?
+    @State private var searchText = ""
+    @State private var searchResults: [MKMapItem] = []
+    @State private var selectedResult: MKMapItem?
+    @State private var mapRegion: MKCoordinateRegion = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+    )
     
     private var runnersWithin25km: [User] {
-        guard let currentLocation = locationManager.location else { return [] }
-        return users.filter { user in
-            let userLocation = CLLocation(latitude: user.latitude, longitude: user.longitude)
-            return currentLocation.distance(from: userLocation) <= 25000 // 25km in meters
+        guard let currentLocation = locationManager.location else {
+            print("No location available")
+            return []
         }
+        
+        let filteredUsers = users.filter { user in
+            guard let userLocation = user.locationAsCLLocation(),
+                  user.id != Auth.auth().currentUser?.uid else {
+                return false
+            }
+            
+            let distance = currentLocation.distance(from: userLocation)
+            let isRecent = isLocationRecent(user: user)
+            
+            return distance <= 25000 && isRecent // 25km radius and recent location
+        }
+        
+        print("Found \(filteredUsers.count) runners within 25km")
+        return filteredUsers
+    }
+    
+    private func isLocationRecent(user: User) -> Bool {
+        guard let lastUpdate = user.lastLocationUpdate else { return false }
+        let hourAgo = Date().addingTimeInterval(-3600) // 1 hour ago
+        return lastUpdate > hourAgo
     }
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Map(coordinateRegion: $region,
-                showsUserLocation: true,
-                annotationItems: users) { user in
-                MapAnnotation(coordinate: CLLocationCoordinate2D(
-                    latitude: user.latitude,
-                    longitude: user.longitude
-                )) {
-                    UserMapMarker(user: user) {
-                        selectedUser = user
-                        showingUserProfile = true
+        ZStack(alignment: .top) {
+            Map(position: $position) {
+                // Show current user location with custom marker
+                if let location = locationManager.location,
+                   let currentUserId = Auth.auth().currentUser?.uid,
+                   let currentUser = users.first(where: { $0.id == currentUserId }) {
+                    Annotation("My Location", coordinate: location.coordinate) {
+                        UserMapMarker(user: currentUser) {
+                            selectedUser = currentUser
+                            showingUserProfile = true
+                        }
                     }
                 }
-            }
-            
-            VStack(spacing: 0) {
-                // Title showing nearby runners count
-                HStack {
-                    Text("\(runnersWithin25km.count) Runners Nearby")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.primary)
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-                    Spacer()
-                }
                 
-                // Nearby Runners Carousel
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(nearbyUsers) { user in
-                            NearbyRunnerCard(user: user) {
+                // Show other users
+                ForEach(runnersWithin25km) { user in
+                    if let userLocation = user.locationAsCLLocation(),
+                       user.id != Auth.auth().currentUser?.uid {
+                        Annotation(user.name, coordinate: userLocation.coordinate) {
+                            UserMapMarker(user: user) {
                                 selectedUser = user
                                 showingUserProfile = true
                             }
                         }
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
+                }
+                
+                // Show selected search result pin
+                if let selectedResult = selectedResult {
+                    Annotation("Selected Location", coordinate: selectedResult.placemark.coordinate) {
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.title)
+                            .foregroundColor(.red)
+                    }
                 }
             }
-            .background(
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .edgesIgnoringSafeArea(.bottom)
-            )
-            .frame(height: 180) // Reduced height for smaller cards
+            .mapStyle(.standard(showsTraffic: false))
+            .mapControls {
+                MapCompass()
+                MapScaleView()
+            }
+            .ignoresSafeArea()
+            
+            // Location Button - Top Right
+            VStack {
+                Button(action: {
+                    if let location = locationManager.location {
+                        withAnimation {
+                            position = .region(MKCoordinateRegion(
+                                center: location.coordinate,
+                                span: MKCoordinateSpan(
+                                    latitudeDelta: 0.005,
+                                    longitudeDelta: 0.005
+                                )
+                            ))
+                        }
+                    } else {
+                        locationManager.requestLocation()
+                    }
+                }) {
+                    Image(systemName: "location.fill")
+                        .font(.title2)
+                        .foregroundColor(.blue)
+                        .frame(width: 44, height: 44)
+                        .background(Color.white)
+                        .clipShape(Circle())
+                        .shadow(radius: 2)
+                }
+                .padding(.top, UIApplication.shared.windows.first?.safeAreaInsets.top ?? 44)
+                .padding(.trailing, 16)
+                
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            
+            // Bottom runners panel
+            VStack {
+                Spacer()
+                RunnersPanel(runnersWithin25km: runnersWithin25km) { user in
+                    selectedUser = user
+                    showingUserProfile = true
+                }
+            }
+        }
+        .edgesIgnoringSafeArea(.all)
+        .onAppear {
+        
+            locationManager.requestLocation()
+            startListeningToUsers()
         }
         .sheet(isPresented: $showingUserProfile) {
             if let user = selectedUser {
                 NavigationView {
-                    ProfileView(userId: user.id)
+                    RunnerDetailView(runner: Runner(user: user))
+                        .navigationBarItems(trailing: Button("Done") {
+                            showingUserProfile = false
+                        })
                 }
             }
         }
-        .onAppear {
-            setupInitialRegion()
-            startListeningToUsers()
+        .alert("Location Access Required", 
+               isPresented: .constant(!locationManager.isLocationEnabled && locationManager.authorizationStatus != .notDetermined)) {
+            Button("Open Settings") {
+                if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(settingsURL)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Please enable location access in Settings to see nearby runners.")
         }
+    }
+    
+    private func performSearch() {
+        guard !searchText.isEmpty else { 
+            searchResults = []
+            return 
+        }
+        
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = searchText
+        request.region = MKCoordinateRegion(
+            center: locationManager.location?.coordinate ?? CLLocationCoordinate2D(latitude: 40.4168, longitude: -3.7038), // Madrid center as default
+            latitudinalMeters: 50000,
+            longitudinalMeters: 50000
+        )
+        
+        let search = MKLocalSearch(request: request)
+        search.start { response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Search error: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let response = response else { 
+                    self.searchResults = []
+                    return 
+                }
+                
+                // Simplify results sorting
+                self.searchResults = response.mapItems.sorted { item1, item2 in
+                    // Get full addresses
+                    let address1 = [
+                        item1.name,
+                        item1.placemark.thoroughfare,
+                        item1.placemark.locality
+                    ].compactMap { $0 }.joined(separator: ", ")
+                    
+                    let address2 = [
+                        item2.name,
+                        item2.placemark.thoroughfare,
+                        item2.placemark.locality
+                    ].compactMap { $0 }.joined(separator: ", ")
+                    
+                    // Simple string matching
+                    return address1.localizedStandardContains(self.searchText)
+                }
+            }
+        }
+    }
+    
+    private func selectSearchResult(_ result: MKMapItem) {
+        selectedResult = result
+        withAnimation {
+            position = .region(MKCoordinateRegion(
+                center: result.placemark.coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            ))
+        }
+        searchText = ""
+        searchResults = []
     }
     
     // Computed property to sort users by distance
@@ -85,222 +226,295 @@ struct MapView: View {
         guard let currentLocation = locationManager.location else { return users }
         
         return users.sorted { user1, user2 in
-            let location1 = CLLocation(latitude: user1.latitude, longitude: user1.longitude)
-            let location2 = CLLocation(latitude: user2.latitude, longitude: user2.longitude)
+            guard let location1 = user1.locationAsCLLocation(),
+                  let location2 = user2.locationAsCLLocation() else {
+                return false
+            }
             
+            // Compare the distances from the current location
             return currentLocation.distance(from: location1) < currentLocation.distance(from: location2)
         }
     }
     
-    private func setupInitialRegion() {
-        if let location = locationManager.location {
-            region = MKCoordinateRegion(
-                center: location.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-            )
-        }
-    }
-    
     private func startListeningToUsers() {
+        print("Starting to listen for nearby users...")
         let db = Firestore.firestore()
-        // Only fetch users that have updated their location in the last hour
-        let hourAgo = Date().addingTimeInterval(-3600)
         
+        // Remove the time filter initially to see if we get any users
         db.collection("users")
-            .whereField("lastLocationUpdate", isGreaterThan: Timestamp(date: hourAgo))
             .addSnapshotListener { snapshot, error in
-                guard let documents = snapshot?.documents else {
-                    print("Error fetching users: \(error?.localizedDescription ?? "Unknown error")")
+                if let error = error {
+                    print("Error fetching users: \(error.localizedDescription)")
                     return
                 }
                 
-                users = documents.map { User(id: $0.documentID, data: $0.data()) }
-            }
-    }
-}
-
-struct UserMapMarker: View {
-    let user: User
-    let action: () -> Void
-    
-    private var isCurrentUser: Bool {
-        user.id == Auth.auth().currentUser?.uid
-    }
-    
-    var body: some View {
-        Button(action: action) {
-            VStack {
-                AsyncImage(url: URL(string: user.profileImageUrl)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Circle()
-                        .fill(Color.gray.opacity(0.3))
+                guard let documents = snapshot?.documents else {
+                    print("No documents found")
+                    return
                 }
-                .frame(width: 40, height: 40)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.white, lineWidth: 2)
-                )
-                .shadow(radius: 3)
                 
-                Text(isCurrentUser ? "You" : user.name)
-                    .font(.caption)
-                    .foregroundColor(.black)
-                    .padding(4)
-                    .background(Color.white)
-                    .cornerRadius(4)
-                    .shadow(radius: 1)
-            }
-        }
-    }
-}
-
-class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
-    private let locationManager = CLLocationManager()
-    @Published var location: CLLocation?
-    
-    override init() {
-        super.init()
-        locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.requestWhenInUseAuthorization()
-        locationManager.startUpdatingLocation()
-    }
-    
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
-        self.location = location
-        updateUserLocation(location)
-    }
-    
-    private func updateUserLocation(_ location: CLLocation) {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let db = Firestore.firestore()
+                self.users = documents.compactMap { document in
+                    let data = document.data()
+                    let user = User(id: document.documentID, data: data)
         
-        let locationData: [String: Any] = [
-            "latitude": location.coordinate.latitude,
-            "longitude": location.coordinate.longitude,
-            "lastLocationUpdate": Timestamp(date: Date())
-        ]
-        
-        db.collection("users").document(userId).updateData(locationData) { error in
-            if let error = error {
-                print("Error updating location: \(error.localizedDescription)")
+                    return user
+                }
+                for user in self.users {
+                    print(user.name)
+                    print(user.lastLocationUpdate)
+                    print(user.location)
+                }
+                print("Fetched \(self.users.count) total users")
+                
             }
+    }
+    
+    struct UserMapMarker: View {
+        let user: User
+        let action: () -> Void
+        @State private var profileImage: UIImage?
+        
+        private var isCurrentUser: Bool {
+            user.id == Auth.auth().currentUser?.uid
         }
-    }
-}
-
-// Add this new view for the carousel cards
-struct NearbyRunnerCard: View {
-    let user: User
-    let action: () -> Void
-    @State private var profileImage: UIImage?
-    @State private var distance: String = ""
-    @StateObject private var locationManager = LocationManager()
-    @Environment(\.colorScheme) var colorScheme
-    
-    private var isCurrentUser: Bool {
-        user.id == Auth.auth().currentUser?.uid
-    }
-    
-    var body: some View {
-        Button(action: action) {
-            ZStack(alignment: .bottom) {
-                // Profile Image Section
-                if let image = profileImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 120, height: 150) // Smaller card size
-                        .clipped()
-                } else {
-                    Rectangle()
-                        .fill(LinearGradient(
-                            colors: [.blue.opacity(0.3), .purple.opacity(0.3)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 120, height: 150) // Smaller card size
-                        .overlay(
-                            Image(systemName: "person.crop.circle.fill")
+        
+        var body: some View {
+            Button(action: action) {
+                VStack(spacing: 4) {
+                    // Profile Image
+                    Group {
+                        if let profileImage = profileImage {
+                            Image(uiImage: profileImage)
                                 .resizable()
-                                .scaledToFit()
-                                .frame(width: 40) // Smaller icon
-                                .foregroundColor(.white.opacity(0.8))
+                                .aspectRatio(contentMode: .fill)
+                        } else {
+                            AsyncImage(url: URL(string: user.profileImageUrl)) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } placeholder: {
+                                Circle()
+                                    .fill(Color.gray.opacity(0.3))
+                                    .overlay(
+                                        Image(systemName: "person.fill")
+                                            .foregroundColor(.white)
+                                    )
+                            }
+                        }
+                    }
+                    .frame(width: 50, height: 50)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(isCurrentUser ? Color.blue : Color.white, lineWidth: 3)
+                    )
+                    .shadow(radius: 3)
+                    
+                    // Name Label
+                    Text(isCurrentUser ? "You" : user.name)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Color.white)
+                                .shadow(radius: 1)
                         )
                 }
+            }
+            .buttonStyle(PlainButtonStyle())
+            .onAppear {
+                loadProfileImage()
+            }
+        }
+        
+        private func loadProfileImage() {
+            guard let url = URL(string: user.profileImageUrl) else { return }
+            
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                if let data = data, let image = UIImage(data: data) {
+                    DispatchQueue.main.async {
+                        self.profileImage = image
+                    }
+                }
+            }.resume()
+        }
+    }
+    
+    struct SearchBarMap: View {
+        @Binding var text: String
+        let onSubmit: () -> Void
+        
+        var body: some View {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.gray)
                 
-                // Info Overlay
+                TextField("Search address...", text: $text)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .autocapitalization(.none)
+                    .submitLabel(.search)
+                    .onSubmit(onSubmit)
+                
+                if !text.isEmpty {
+                    Button(action: { 
+                        text = ""
+                        onSubmit()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            .padding(12)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .shadow(radius: 2)
+        }
+    }
+    
+    struct SearchResultRow: View {
+        let result: MKMapItem
+        let action: () -> Void
+        
+        var formattedAddress: String {
+            [
+                result.placemark.thoroughfare,
+                result.placemark.subThoroughfare,
+                result.placemark.locality,
+                result.placemark.subLocality
+            ].compactMap { $0 }.joined(separator: ", ")
+        }
+        
+        var body: some View {
+            Button(action: action) {
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(isCurrentUser ? "You" : user.name)
-                            .font(.system(size: 14, weight: .semibold)) // Smaller font
-                            .foregroundColor(.white)
-                        
-                        Spacer()
-                        
-                        Text(distance)
-                            .font(.system(size: 10)) // Smaller font
-                            .foregroundColor(.white)
-                    }
+                    Text(result.name ?? "")
+                        .font(.headline)
+                        .foregroundColor(.primary)
                     
-                    HStack {
-                        Image(systemName: "mappin.circle.fill")
-                            .foregroundColor(.red)
-                            .font(.system(size: 10)) // Smaller icon
-                        Text("Nearby")
-                            .font(.system(size: 10)) // Smaller font
-                            .foregroundColor(.white)
+                    Text(formattedAddress)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .lineLimit(2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
+            }
+        }
+    }
+    
+    struct RunnersPanel: View {
+        let runnersWithin25km: [User]
+        let onUserSelected: (User) -> Void
+        
+        var body: some View {
+            VStack(spacing: 0) {
+                HStack {
+                    Text("\(runnersWithin25km.count) Runners Nearby")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal)
+                        .padding(.top, 12)
+                    Spacer()
+                }
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(runnersWithin25km) { user in
+                            Button(action: {
+                                onUserSelected(user)
+                            }) {
+                                NearbyRunnerCard(user: user) {
+                                    onUserSelected(user)
+                                }
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                }
+            }
+            .background(
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .edgesIgnoringSafeArea(.bottom)
+            )
+            .frame(height: 380) // Increased height to show full cards
+        }
+    }
+    
+    struct NearbyRunnerCard: View {
+        let user: User
+        let action: () -> Void
+        @State private var profileImage: UIImage?
+        @State private var distance: String = ""
+        @StateObject private var locationManager = LocationManager()
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                // Profile Image
+                Group {
+                    if let profileImage = profileImage {
+                        Image(uiImage: profileImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .overlay(
+                                Image(systemName: "person.fill")
+                                    .foregroundColor(.white)
+                            )
                     }
                 }
-                .padding(6) // Smaller padding
-                .background(
-                    Rectangle()
-                        .fill(LinearGradient(
-                            colors: [.clear, .black.opacity(0.7)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ))
-                )
-            }
-            .frame(width: 120, height: 150) // Smaller card size
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .shadow(radius: 4)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .onAppear {
-            loadProfileImage()
-            calculateDistance()
-        }
-    }
-    
-    private func loadProfileImage() {
-        guard let url = URL(string: user.profileImageUrl) else { return }
-        
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let data = data, let image = UIImage(data: data) {
-                DispatchQueue.main.async {
-                    self.profileImage = image
+                .frame(width: 140, height: 140)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                
+                // Name and Distance
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(user.name)
+                        .font(.system(size: 16, weight: .semibold))
+                        .lineLimit(1)
+                    
+                    if !distance.isEmpty {
+                        Text(distance)
+                            .font(.system(size: 14))
+                            .foregroundColor(.gray)
+                    }
                 }
+                .padding(.horizontal, 4)
             }
-        }.resume()
-    }
-    
-    private func calculateDistance() {
-        guard let currentLocation = locationManager.location else { return }
-        let userLocation = CLLocation(latitude: user.latitude, longitude: user.longitude)
-        let distanceInMeters = currentLocation.distance(from: userLocation)
+            .frame(width: 140)
+            .background(Color.white.opacity(0.8))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(radius: 2)
+            .onAppear {
+                loadProfileImage()
+                calculateDistance()
+            }
+        }
         
-        if distanceInMeters < 1000 {
-            distance = String(format: "%.0fm", distanceInMeters)
-        } else {
-            let distanceInKm = distanceInMeters / 1000
-            distance = String(format: "%.1fkm", distanceInKm)
+        private func loadProfileImage() {
+            guard let url = URL(string: user.profileImageUrl) else { return }
+            URLSession.shared.dataTask(with: url) { data, _, _ in
+                if let data = data, let image = UIImage(data: data) {
+                    DispatchQueue.main.async {
+                        self.profileImage = image
+                    }
+                }
+            }.resume()
+        }
+        
+        private func calculateDistance() {
+            if let currentLocation = locationManager.location,
+               let userLocation = user.locationAsCLLocation() {
+                let distanceInMeters = currentLocation.distance(from: userLocation)
+                distance = String(format: "%.1f km", distanceInMeters / 1000)
+            }
         }
     }
 }
- 

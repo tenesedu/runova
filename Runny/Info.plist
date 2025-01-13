@@ -10,6 +10,7 @@
 	<string>We need your location to show you nearby runners</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>We need your location to show you nearby runners and update your location for other runners</string>
+	
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
@@ -17,3 +18,4 @@
 	</array>
 </dict>
 </plist>
+

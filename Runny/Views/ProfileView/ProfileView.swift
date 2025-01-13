@@ -121,9 +121,9 @@ struct ProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    NavigationLink(destination: ConnectionsView()) {
-                        Image(systemName: "person.2")
-                    }
+                    // NavigationLink(destination: ConnectionsView()) {
+                    //     Image(systemName: "person.2")
+                    // }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -134,9 +134,9 @@ struct ProfileView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: ConnectionRequestsView()) {
-                        Image(systemName: "person.badge.plus")
-                    }
+                    // NavigationLink(destination: ConnectionRequestsView()) {
+                    //     Image(systemName: "person.badge.plus")
+                    // }
                 }
             }
             .sheet(isPresented: $isEditing) {
