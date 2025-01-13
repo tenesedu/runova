@@ -53,7 +53,7 @@ struct MapView: View {
                 if let location = locationManager.location,
                    let currentUserId = Auth.auth().currentUser?.uid,
                    let currentUser = users.first(where: { $0.id == currentUserId }) {
-                    Annotation("My Location", coordinate: location.coordinate) {
+                    Annotation("",coordinate: location.coordinate) {
                         UserMapMarker(user: currentUser) {
                             selectedUser = currentUser
                             showingUserProfile = true
@@ -65,7 +65,7 @@ struct MapView: View {
                 ForEach(runnersWithin25km) { user in
                     if let userLocation = user.locationAsCLLocation(),
                        user.id != Auth.auth().currentUser?.uid {
-                        Annotation(user.name, coordinate: userLocation.coordinate) {
+                        Annotation("",coordinate: userLocation.coordinate) {
                             UserMapMarker(user: user) {
                                 selectedUser = user
                                 showingUserProfile = true
@@ -409,89 +409,121 @@ struct MapView: View {
     struct RunnersPanel: View {
         let runnersWithin25km: [User]
         let onUserSelected: (User) -> Void
+        @State private var isExpanded = false
         
         var body: some View {
             VStack(spacing: 0) {
+                // Header with expand/collapse button
                 HStack {
                     Text("\(runnersWithin25km.count) Runners Nearby")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.primary)
-                        .padding(.horizontal)
-                        .padding(.top, 12)
+                    
                     Spacer()
+                    
+                    Button(action: {
+                        withAnimation {
+                            isExpanded.toggle()
+                        }
+                    }) {
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.up")
+                            .foregroundColor(.gray)
+                    }
                 }
+                .padding(.horizontal)
+                .padding(.top, 12)
                 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 16) {
-                        ForEach(runnersWithin25km) { user in
-                            Button(action: {
-                                onUserSelected(user)
-                            }) {
-                                NearbyRunnerCard(user: user) {
+                if !runnersWithin25km.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 16) {
+                            ForEach(runnersWithin25km) { user in
+                                NearbyRunnerCard(user: user, isExpanded: isExpanded) {
                                     onUserSelected(user)
                                 }
                             }
-                            .buttonStyle(PlainButtonStyle())
                         }
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 12)
+                } else {
+                    Spacer()
+                        .frame(height: 12)
                 }
             }
             .background(
                 Rectangle()
                     .fill(.ultraThinMaterial)
-                    .edgesIgnoringSafeArea(.bottom)
+                    
             )
-            .frame(height: 380) // Increased height to show full cards
+            .frame(height: runnersWithin25km.isEmpty ? 80 : (isExpanded ? 340 : 180))
         }
     }
     
     struct NearbyRunnerCard: View {
         let user: User
+        let isExpanded: Bool
         let action: () -> Void
         @State private var profileImage: UIImage?
         @State private var distance: String = ""
         @StateObject private var locationManager = LocationManager()
         
         var body: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                // Profile Image
-                Group {
-                    if let profileImage = profileImage {
-                        Image(uiImage: profileImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } else {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
-                            .overlay(
-                                Image(systemName: "person.fill")
-                                    .foregroundColor(.white)
-                            )
+            Button(action: action) {
+                VStack(alignment: .leading, spacing: 8) {
+                    // Profile Image with overlapped distance
+                    ZStack(alignment: .topLeading) {
+                        // Profile Image
+                        Group {
+                            if let profileImage = profileImage {
+                                Image(uiImage: profileImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } else {
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.3))
+                                    .overlay(
+                                        Image(systemName: "person.fill")
+                                            .foregroundColor(.white)
+                                    )
+                            }
+                        }
+                        .frame(width: 120, height: isExpanded ? 140 : 100)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        
+                        // Distance Badge
+                        if !distance.isEmpty {
+                            Text(distance + " away")
+                                .font(.system(size: 12))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.6))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .padding(8)
+                        }
                     }
-                }
-                .frame(width: 140, height: 140)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                
-                // Name and Distance
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(user.name)
-                        .font(.system(size: 16, weight: .semibold))
-                        .lineLimit(1)
                     
-                    if !distance.isEmpty {
-                        Text(distance)
-                            .font(.system(size: 14))
-                            .foregroundColor(.gray)
+                    // Runner Info
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(user.name)
+                            .font(.system(size: 15, weight: .semibold))
+                            .lineLimit(1)
+                        
+                        if isExpanded {
+                            Text(user.city)
+                                .font(.system(size: 13))
+                                .foregroundColor(.gray)
+                                .lineLimit(1)
+                        }
                     }
+                    .padding(.horizontal, 4)
                 }
-                .padding(.horizontal, 4)
+                .frame(width: 120)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .shadow(radius: 2)
             }
-            .frame(width: 140)
-            .background(Color.white.opacity(0.8))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .shadow(radius: 2)
+            .buttonStyle(PlainButtonStyle())
             .onAppear {
                 loadProfileImage()
                 calculateDistance()
