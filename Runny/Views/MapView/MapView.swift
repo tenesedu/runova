@@ -138,6 +138,7 @@ struct MapView: View {
             if users.isEmpty {
                 startListeningToUsers()
             }
+            
         }
         .sheet(item: $selectedUser) { user in
            
@@ -319,12 +320,13 @@ struct MapView: View {
                             .shadow(radius: 1)
                     )
             }
-            .contentShape(Rectangle()) // Makes the entire area tappable
+            .contentShape(Rectangle()) 
             .onTapGesture {
                 action()
             }
             .onAppear {
                 loadProfileImage()
+                
             }
         }
         
@@ -461,7 +463,7 @@ struct MapView: View {
                 Rectangle()
                     .fill(.ultraThinMaterial)
             )
-            .frame(height: runnersWithin25km.isEmpty ? 160 : (isExpanded ? 340 : 180)) // Increased minimum height
+            .frame(height: runnersWithin25km.isEmpty ? 160 : (isExpanded ? 380 : 180)) // Increased minimum height
         }
     }
     
@@ -475,9 +477,11 @@ struct MapView: View {
         
         var body: some View {
             Button(action: action) {
-                VStack(alignment: .leading, spacing: 8) {
-                    // Profile Image with overlapped distance
-                    ZStack(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 0) {
+                 
+                    
+                    // Profile Image with overlays
+                    ZStack {
                         // Profile Image
                         Group {
                             if let profileImage = profileImage {
@@ -493,36 +497,47 @@ struct MapView: View {
                                     )
                             }
                         }
-                        .frame(width: 120, height: isExpanded ? 140 : 100)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .frame(width: 120, height: 160)
                         
-                        // Distance Badge
-                        if !distance.isEmpty {
-                            Text(distance + " away")
-                                .font(.system(size: 12))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.black.opacity(0.6))
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .padding(8)
+                        // Overlays
+                        VStack(alignment: .leading, spacing: 0) {
+                            // Distance at top
+                            if !distance.isEmpty {
+                                Text(distance.isEmpty ? "Location unavailable" : "\(distance) away")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.black.opacity(0.6))
+                                    .cornerRadius(8)
+                                    .padding(8)
+                                    .frame(maxWidth: .infinity, alignment: .leading) 
+                            }
+                            
+                            Spacer()
+                            
+                            // Name at bottom with gradient background
+                            ZStack {
+                                // Gradient just for the name area
+                                LinearGradient(
+                                    gradient: Gradient(
+                                        colors: [.clear, .black.opacity(0.7)]
+                                    ),
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                                .frame(height: 40)
+                                
+                                Text(user.name)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(8)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         }
                     }
-                    
-                    // Runner Info
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(user.name)
-                            .font(.system(size: 15, weight: .semibold))
-                            .lineLimit(1)
-                        
-                        if isExpanded {
-                            Text(user.city)
-                                .font(.system(size: 13))
-                                .foregroundColor(.gray)
-                                .lineLimit(1)
-                        }
-                    }
-                    .padding(.horizontal, 4)
+                    .frame(width: 120, height: 160)
+                    .clipped()
                 }
                 .frame(width: 120)
                 .background(Color.white)
@@ -532,7 +547,9 @@ struct MapView: View {
             .buttonStyle(PlainButtonStyle())
             .onAppear {
                 loadProfileImage()
+             
                 calculateDistance()
+                
             }
         }
         
@@ -547,12 +564,16 @@ struct MapView: View {
             }.resume()
         }
         
-        private func calculateDistance() {
+       private func calculateDistance() {
             if let currentLocation = locationManager.location,
-               let userLocation = user.locationAsCLLocation() {
+            let userLocation = user.locationAsCLLocation() {
                 let distanceInMeters = currentLocation.distance(from: userLocation)
                 distance = String(format: "%.1f km", distanceInMeters / 1000)
+                print("Calculated distance: \(distance)") // Debug log
+            } else {
+                print("Unable to calculate distance: currentLocation or userLocation is nil") // Debug log
             }
         }
+
     }
 }
