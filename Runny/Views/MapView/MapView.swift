@@ -125,7 +125,7 @@ struct MapView: View {
             // Bottom runners panel
             VStack {
                 Spacer()
-                RunnersPanel(runnersWithin25km: runnersWithin25km) { user in
+                RunnersPanel(runnersWithin25km: runnersWithin25km, locationManager: locationManager) { user in
                     selectedUser = user
                     showingUserProfile = true
                 }
@@ -408,7 +408,9 @@ struct MapView: View {
     
     struct RunnersPanel: View {
         let runnersWithin25km: [User]
+        let locationManager: LocationManager
         let onUserSelected: (User) -> Void
+
         @State private var isExpanded = false
         
         var body: some View {
@@ -449,9 +451,9 @@ struct MapView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 16) {
                             ForEach(runnersWithin25km) { user in
-                                NearbyRunnerCard(user: user, isExpanded: isExpanded) {
+                                NearbyRunnerCard(user: user, isExpanded: isExpanded, locationManager: locationManager, action: {
                                     onUserSelected(user)
-                                }
+                                })
                             }
                         }
                         .padding(.horizontal)
@@ -470,10 +472,10 @@ struct MapView: View {
     struct NearbyRunnerCard: View {
         let user: User
         let isExpanded: Bool
+        let locationManager: LocationManager
         let action: () -> Void
         @State private var profileImage: UIImage?
         @State private var distance: String = ""
-        @StateObject private var locationManager = LocationManager()
         
         var body: some View {
             Button(action: action) {
@@ -550,6 +552,9 @@ struct MapView: View {
              
                 calculateDistance()
                 
+            }
+             .onChange(of: locationManager.location) { _ in
+                calculateDistance()
             }
         }
         
