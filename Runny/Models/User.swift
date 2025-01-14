@@ -15,6 +15,12 @@ struct User: Identifiable {
     let location: GeoPoint?
     let lastLocationUpdate: Date?
     
+    var isActive: Bool {
+        guard let lastUpdate = lastLocationUpdate else { return false }
+        let hourAgo = Date().addingTimeInterval(-3600) // 1 hour ago
+        return lastUpdate > hourAgo
+    }
+    
     init(id: String, data: [String: Any]) {
         self.id = id
         self.profileImageUrl = data["profileImageUrl"] as? String ?? ""

@@ -34,19 +34,15 @@ struct HomeView: View {
     }
     
     var nearbyRunners: [Runner] {
-        guard let currentLocation = locationManager.location else { return [] }
+        guard let currentLocation = locationManager.location else { 
+            print("No location available")
+            return [] 
+        }
         
         return users
             .filter { user in
-                guard let userLocation = user.locationAsCLLocation(),
-                      user.id != Auth.auth().currentUser?.uid else {
-                    return false
-                }
-                
-                let distance = currentLocation.distance(from: userLocation)
-                let isRecent = isLocationRecent(user: user)
-                
-                return distance <= 25000 && isRecent // 25km radius and recent location
+                user.id != Auth.auth().currentUser?.uid && 
+                user.locationAsCLLocation() != nil // Only include users with valid locations
             }
             .sorted { user1, user2 in
                 guard let location1 = user1.locationAsCLLocation(),
@@ -121,15 +117,15 @@ struct HomeView: View {
                             )
                         }
                         
-                        // // Join Run Button
-                        // NavigationLink(destination: RunsView()) {
-                        //     ActionButton(
-                        //         title: "Join Run".localized,
-                        //         icon: "person.2.fill",
-                        //         backgroundColor: .white,
-                        //         isOutlined: true
-                        //     )
-                        // }
+                        // Join Run Button
+                        NavigationLink(destination: RunsView()) {
+                            ActionButton(
+                                title: "Join Run".localized,
+                                icon: "person.2.fill",
+                                backgroundColor: .white,
+                                isOutlined: true
+                            )
+                        }
                     }
                     .padding(.horizontal)
                     
@@ -173,7 +169,7 @@ struct HomeView: View {
                     }
                     .sheet(isPresented: $showingAllRunners) {
                         NavigationView {
-                            AllRunnersView(runners: nearbyRunners, users: users)
+                            AllRunnersView(runners: nearbyRunners, users: users, locationManager: locationManager)
                         }
                     }
                 }
@@ -205,7 +201,6 @@ struct HomeView: View {
             .onAppear {
                 fetchUserInfo()
                 fetchRunners()
-                fetchInterests()
             }
             .refreshable {
                 // Refresh all content
@@ -224,11 +219,9 @@ struct HomeView: View {
     
     private func fetchRunners() {
         let db = Firestore.firestore()
-        let hourAgo = Date().addingTimeInterval(-3600)
         
         db.collection("users")
-            .whereField("lastLocationUpdate", isGreaterThan: Timestamp(date: hourAgo))
-            .addSnapshotListener { snapshot, error in
+            .getDocuments { snapshot, error in
                 if let error = error {
                     print("Error fetching users: \(error.localizedDescription)")
                     return
@@ -252,7 +245,7 @@ struct HomeView: View {
         let db = Firestore.firestore()
         db.collection("interests")
             .order(by: "name")
-            .addSnapshotListener { querySnapshot, error in
+            .getDocuments { querySnapshot, error in
                 if let error = error {
                     print("❌ Error fetching interests: \(error.localizedDescription)")
                     return
@@ -339,6 +332,16 @@ struct HomeView: View {
             }
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
+            
+            // Add active status indicator
+            Circle()
+                .fill(runner.isActive ? Color.green : Color.gray)
+                .frame(width: 12, height: 12)
+                .overlay(
+                    Circle()
+                        .stroke(Color.white, lineWidth: 2)
+                )
+                .position(x: 12, y: 12)
         }
         .frame(width: 120, height: 160)
         .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -366,6 +369,7 @@ struct HomeView: View {
         }
     }
 }
+
 
 struct RunnerCard: View {
     let runner: Runner
@@ -532,74 +536,74 @@ struct ActionButton: View {
     }
 }
 
-struct RunnerCardView: View {
-    let runner: Runner
-    let users: [User]
-    @StateObject private var locationManager = LocationManager()
+// struct RunnerCardView: View {
+//     let runner: Runner
+//     let users: [User]
+//     let locationManager: LocationManager    
+//     private func calculateDistance() -> String? {
+//         guard let currentLocation = locationManager.location,
+//               let user = users.first(where: { $0.id == runner.id }),
+//               let userLocation = user.locationAsCLLocation() else {
+//             return nil
+//         }
+//         let distance = currentLocation.distance(from: userLocation)
+//         return String(format: "%.1f km", distance / 1000)
+//     }
     
-    private func calculateDistance() -> String? {
-        guard let currentLocation = locationManager.location,
-              let user = users.first(where: { $0.id == runner.id }),
-              let userLocation = user.locationAsCLLocation() else {
-            return nil
-        }
-        let distance = currentLocation.distance(from: userLocation)
-        return String(format: "%.1f km", distance / 1000)
-    }
-    
-    var body: some View {
-        NavigationLink(destination: RunnerDetailView(runner: runner)) {
-            VStack(alignment: .leading, spacing: 8) {
-                // Profile Image
-                AsyncImage(url: URL(string: runner.profileImageUrl)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .foregroundColor(.white)
-                        )
-                }
-                .frame(width: 160, height: 200)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
+//     var body: some View {
+//         NavigationLink(destination: RunnerDetailView(runner: runner)) {
+//             VStack(alignment: .leading, spacing: 8) {
+//                 // Profile Image
+//                 AsyncImage(url: URL(string: runner.profileImageUrl)) { image in
+//                     image
+//                         .resizable()
+//                         .aspectRatio(contentMode: .fill)
+//                 } placeholder: {
+//                     Rectangle()
+//                         .fill(Color.gray.opacity(0.3))
+//                         .overlay(
+//                             Image(systemName: "person.fill")
+//                                 .foregroundColor(.white)
+//                         )
+//                 }
+//                 .frame(width: 160, height: 200)
+//                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 
-                // Runner Info
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(runner.name)
-                        .font(.headline)
-                        .lineLimit(1)
+//                 // Runner Info
+//                 VStack(alignment: .leading, spacing: 4) {
+//                     Text(runner.name)
+//                         .font(.headline)
+//                         .lineLimit(1)
                     
-                    if let distance = calculateDistance() {
-                        Text(distance)
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                    }
+//                     if let distance = calculateDistance() {
+//                         Text(distance)
+//                             .font(.subheadline)
+//                             .foregroundColor(.gray)
+//                     }
                     
-                    Text(runner.city)
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .lineLimit(1)
-                }
-                .padding(.horizontal, 8)
-                .padding(.bottom, 8)
-            }
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .shadow(radius: 5)
-            .frame(width: 160)
-        }
-    }
-}
+//                     Text(runner.city)
+//                         .font(.subheadline)
+//                         .foregroundColor(.gray)
+//                         .lineLimit(1)
+//                 }
+//                 .padding(.horizontal, 8)
+//                 .padding(.bottom, 8)
+//             }
+//             .background(Color.white)
+//             .clipShape(RoundedRectangle(cornerRadius: 20))
+//             .shadow(radius: 5)
+//             .frame(width: 160)
+//         }
+//     }
+// }
 
 struct AllRunnersView: View {
     let runners: [Runner]
     let users: [User]
+    let locationManager: LocationManager
+
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var locationManager = LocationManager()
-    
+
     var sortedRunners: [Runner] {
         guard let currentLocation = locationManager.location else { return runners }
         
@@ -625,16 +629,28 @@ struct AllRunnersView: View {
                 ForEach(sortedRunners) { runner in
                     NavigationLink(destination: RunnerDetailView(runner: runner)) {
                         HStack(spacing: 16) {
-                            // Profile Image
-                            AsyncImage(url: URL(string: runner.profileImageUrl)) { image in
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                            } placeholder: {
-                                Color.gray.opacity(0.3)
+                            // Add ZStack to overlay active status on profile image
+                            ZStack(alignment: .topTrailing) {
+                                AsyncImage(url: URL(string: runner.profileImageUrl)) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    Color.gray.opacity(0.3)
+                                }
+                                .frame(width: 60, height: 60)
+                                .clipShape(Circle())
+                                
+                                // Active status indicator
+                                Circle()
+                                    .fill(runner.isActive ? Color.green : Color.gray)
+                                    .frame(width: 12, height: 12)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.white, lineWidth: 2)
+                                    )
+                                    .offset(x: 3, y: -3)
                             }
-                            .frame(width: 60, height: 60)
-                            .clipShape(Circle())
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(runner.name)

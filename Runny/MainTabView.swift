@@ -17,7 +17,7 @@ struct MainTabView: View {
                 }
                 .tag(1)
             
-            // RunsView()
+            RunsView()
                 .tabItem {
                     Image(systemName: "figure.run")
                 }

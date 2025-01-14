@@ -10,7 +10,7 @@ struct Runner: Identifiable {
     let averagePace: String
     let goals: [String]
     let interests: [String]
-    
+    var isActive: Bool
     // Initialize Runner from User
        init(user: User) {
            self.id = user.id
@@ -22,6 +22,7 @@ struct Runner: Identifiable {
            self.averagePace = user.averagePace
            self.goals = user.goals
            self.interests = user.interests
+           self.isActive = user.isActive
            
        }
 }
