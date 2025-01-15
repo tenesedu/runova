@@ -5,44 +5,90 @@ import FirebaseFirestore
 struct ChatView: View {
     @State private var conversations: [Conversation] = []
     @State private var searchText = ""
+    @State private var showingNewGroupSheet = false
+    @State private var groupName = ""
+    @State private var selectedParticipants: Set<String> = []
     @Environment(\.colorScheme) var colorScheme
+
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Search bar
+                // Search bar at the top
                 SearchBar(text: $searchText)
                     .padding(.horizontal)
                     .padding(.vertical, 8)
                     .background(Color(.systemBackground))
                 
-                if conversations.isEmpty {
-                    EmptyStateView(
-                        message: "No messages yet",
-                        systemImage: "message.circle",
-                        description: "Start a conversation with other runners!"
-                    )
-                } else {
-                    // Conversations list
-                    List {
-                        ForEach(filteredConversations) { conversation in
-                            NavigationLink(destination: ChatDetailView(conversation: conversation)) {
-                                ConversationRow(conversation: conversation)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    deleteConversation(conversation)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                // Content area
+                ZStack {
+                    if conversations.isEmpty {
+                        VStack {
+                            Spacer()
+                                .frame(height: 50) // Adjust this value to fine-tune position
+                            
+                            EmptyStateView(
+                                message: "No messages yet",
+                                systemImage: "message.circle",
+                                description: "Start a conversation with other runners!"
+                            )
+                            
+                            Spacer()
+                        }
+                    } else {
+                        List {
+                            ForEach(filteredConversations) { conversation in
+                                NavigationLink(destination: ChatDetailView(conversation: conversation)) {
+                                    ConversationRow(conversation: conversation)
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        deleteConversation(conversation)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
+                        .listStyle(PlainListStyle())
                     }
-                    .listStyle(PlainListStyle())
                 }
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Messages")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    NavigationLink(destination: ConnectionsView()) {
+                        Image(systemName: "person.2")
+                            .foregroundColor(.blue)
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button(action: { showingNewGroupSheet = true }) {
+                            Label("New Group", systemImage: "person.3")
+                        }
+                        
+                        NavigationLink(destination: ConnectionsView()) {
+                            Label("New Message", systemImage: "square.and.pencil")
+                        }
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .foregroundColor(.blue)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingNewGroupSheet) {
+                CreateGroupView(
+                    isPresented: $showingNewGroupSheet,
+                    onComplete: { name, participants in
+                        // The group is already created in Firestore by CreateGroupView
+                        // We just need to refresh our conversations
+                        fetchConversations()
+                    }
+                )
+            }
             .onAppear {
                 fetchConversations()
             }
@@ -94,7 +140,11 @@ struct ChatView: View {
             return conversations
         }
         return conversations.filter { conversation in
-            conversation.otherUserProfile?.name.lowercased().contains(searchText.lowercased()) ?? false
+            if conversation.type == "direct" {
+                return conversation.otherUserProfile?.name.lowercased().contains(searchText.lowercased()) ?? false
+            } else {
+                return conversation.groupName?.lowercased().contains(searchText.lowercased()) ?? false
+            }
         }
     }
     
@@ -102,47 +152,55 @@ struct ChatView: View {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
         let db = Firestore.firestore()
-        // Use snapshot listener to get real-time updates
         db.collection("conversations")
             .whereField("participants", arrayContains: userId)
             .addSnapshotListener { querySnapshot, error in
                 guard let documents = querySnapshot?.documents else { return }
                 
-                // Create a dispatch group to handle async user profile fetching
                 let group = DispatchGroup()
                 var updatedConversations: [Conversation] = []
                 
                 for document in documents {
                     let data = document.data()
-                    let participants = data["participants"] as? [String] ?? []
-                    let otherUserId = participants.first { $0 != userId } ?? ""
+                    guard let type = data["type"] as? String,
+                          let participants = data["participants"] as? [String],
+                          let createdAt = data["createdAt"] as? Timestamp,
+                          let createdBy = data["createdBy"] as? String,
+                          let lastMessage = data["lastMessage"] as? String,
+                          let lastMessageTime = data["lastMessageTime"] as? Timestamp,
+                          let unreadCount = data["unreadCount"] as? [String: Int] else {
+                        continue
+                    }
                     
-                    let conversation = Conversation(
+                    var conversation = Conversation(
                         id: document.documentID,
-                        otherUserId: otherUserId,
-                        lastMessage: data["lastMessage"] as? String ?? "",
-                        lastMessageTime: (data["lastMessageTime"] as? Timestamp)?.dateValue() ?? Date(),
-                        unreadCount: data["unreadCount.\(userId)"] as? Int ?? 0
+                        type: type,
+                        participants: participants,
+                        createdAt: createdAt.dateValue(),
+                        createdBy: createdBy,
+                        lastMessage: lastMessage,
+                        lastMessageTime: lastMessageTime.dateValue(),
+                        unreadCount: unreadCount,
+                        groupName: data["groupName"] as? String,
+                        groupImageUrl: data["groupImageUrl"] as? String,
+                        groupDescription: data["groupDescription"] as? String,
+                        adminId: data["adminId"] as? String,
+                        otherUserId: participants.first { $0 != userId }
                     )
                     
-                    group.enter()
-                    // Fetch other user's profile
-                    db.collection("users").document(otherUserId).getDocument { snapshot, error in
-                        defer { group.leave() }
-                        
-                        if let userData = snapshot?.data() {
-                            var updatedConversation = conversation
-                            updatedConversation.otherUserProfile = UserProfile(
-                                id: snapshot?.documentID ?? "",
-                                name: userData["name"] as? String ?? "Unknown",
-                                age: userData["age"] as? String ?? "",
-                                averagePace: userData["averagePace"] as? String ?? "",
-                                city: userData["city"] as? String ?? "",
-                                profileImageUrl: userData["profileImageUrl"] as? String ?? "",
-                                gender: userData["gender"] as? String ?? ""
-                            )
-                            updatedConversations.append(updatedConversation)
+                    if type == "direct", let otherUserId = conversation.otherUserId {
+                        group.enter()
+                        db.collection("users").document(otherUserId).getDocument(source: .default) { snapshot, error in
+                            defer { group.leave() }
+                            
+                            if let userData = snapshot?.data() {
+                                let user = User(id: snapshot?.documentID ?? "", data: userData)
+                                conversation.otherUserProfile = Runner(user: user)
+                                updatedConversations.append(conversation)
+                            }
                         }
+                    } else {
+                        updatedConversations.append(conversation)
                     }
                 }
                 
@@ -188,35 +246,63 @@ struct ConversationRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Profile Image
-            if let profileUrl = conversation.otherUserProfile?.profileImageUrl,
-               !profileUrl.isEmpty {
-                AsyncImage(url: URL(string: profileUrl)) { image in
-                    image
-                        .resizable()
-                        .scaledToFill()
-                } placeholder: {
-                    ProgressView()
+            // Profile/Group Image
+            Group {
+                if conversation.type == "direct" {
+                    // Direct message profile image
+                    if let profileUrl = conversation.otherUserProfile?.profileImageUrl,
+                       !profileUrl.isEmpty {
+                        AsyncImage(url: URL(string: profileUrl)) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                    } else {
+                        Circle()
+                            .fill(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray6))
+                            .overlay(Text("👤"))
+                    }
+                } else {
+                    // Group image
+                    if let groupImageUrl = conversation.groupImageUrl,
+                       !groupImageUrl.isEmpty {
+                        AsyncImage(url: URL(string: groupImageUrl)) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                    } else {
+                        Circle()
+                            .fill(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray6))
+                            .overlay(
+                                Image(systemName: "person.3.fill")
+                                    .foregroundColor(.white)
+                            )
+                    }
                 }
-                .frame(width: 52, height: 52)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                )
-            } else {
-                Circle()
-                    .fill(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray6))
-                    .frame(width: 52, height: 52)
-                    .overlay(Text("👤"))
             }
+            .frame(width: 52, height: 52)
+            .clipShape(Circle())
+            .overlay(
+                Circle()
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
             
             // Message Info
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(conversation.otherUserProfile?.name ?? "Loading...")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.primary)
+                    if conversation.type == "direct" {
+                        Text(conversation.otherUserProfile?.name ?? "Loading...")
+                            .font(.system(size: 16, weight: .semibold))
+                    } else {
+                        Text(conversation.groupName ?? "Group Chat")
+                            .font(.system(size: 16, weight: .semibold))
+                            .lineLimit(1)
+                    }
                     
                     Spacer()
                     
@@ -226,15 +312,24 @@ struct ConversationRow: View {
                 }
                 
                 HStack(alignment: .top) {
-                    Text(conversation.lastMessage)
-                        .font(.system(size: 14))
-                        .foregroundColor(.gray)
-                        .lineLimit(2)
+                    if conversation.type == "group" {
+                        Text("\(conversation.participants.count) members • ")
+                            .font(.system(size: 13))
+                            .foregroundColor(.gray) +
+                        Text(conversation.lastMessage)
+                            .font(.system(size: 14))
+                            .foregroundColor(.gray)
+                    } else {
+                        Text(conversation.lastMessage)
+                            .font(.system(size: 14))
+                            .foregroundColor(.gray)
+                    }
                     
                     Spacer()
                     
-                    if conversation.unreadCount > 0 {
-                        Text("\(conversation.unreadCount)")
+                    let unreadCount = conversation.unreadCount[Auth.auth().currentUser?.uid ?? ""] ?? 0
+                    if unreadCount > 0 {
+                        Text("\(unreadCount)")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(minWidth: 18)
@@ -244,8 +339,10 @@ struct ConversationRow: View {
                             .clipShape(Capsule())
                     }
                 }
+                .lineLimit(1)
             }
         }
+        .padding(.vertical, 4)
     }
     
     private func timeString(from date: Date) -> String {
@@ -263,14 +360,3 @@ struct ConversationRow: View {
         }
     }
 }
-
-struct Conversation: Identifiable {
-    let id: String
-    let otherUserId: String
-    let lastMessage: String
-    let lastMessageTime: Date
-    let unreadCount: Int
-    var otherUserProfile: UserProfile?
-} 
-
-
