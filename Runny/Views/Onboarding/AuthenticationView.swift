@@ -40,7 +40,7 @@ struct AuthenticationView: View {
                 SignUpView()
             }
             .fullScreenCover(isPresented: $showingLogin) {
-                LoginView()
+                SignInEmailView()
             }
         }
     }

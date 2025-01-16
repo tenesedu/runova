@@ -1,7 +1,7 @@
 import SwiftUI
 import FirebaseAuth
 
-final class LoginViewModel: ObservableObject {
+final class SignInEmailViewModel: ObservableObject {
     @Published var email: String = ""
     @Published var password: String = ""
     @Published var errorMessage: String = ""
@@ -21,8 +21,8 @@ final class LoginViewModel: ObservableObject {
     }
 }
 
-struct LoginView: View {
-    @StateObject private var viewModel = LoginViewModel()
+struct SignInEmailView: View {
+    @StateObject private var viewModel = SignInEmailViewModel()
     @State private var showingSignUp: Bool = false
 
     var body: some View {
