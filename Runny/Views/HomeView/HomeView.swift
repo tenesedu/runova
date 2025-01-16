@@ -4,7 +4,7 @@ import FirebaseFirestore
 import CoreLocation
 
 struct HomeView: View {
-    @State private var users: [User] = []
+    @State private var users: [UserApp] = []
     @State private var interests: [Interest] = []
     @State private var isLoading = true
     @State private var showingProfile = false
@@ -53,10 +53,11 @@ struct HomeView: View {
                 let distance2 = currentLocation.distance(from: location2)
                 return distance1 < distance2
             }
+            .prefix(5)
             .map { Runner(user: $0) }
     }
     
-    private func isLocationRecent(user: User) -> Bool {
+    private func isLocationRecent(user: UserApp) -> Bool {
         guard let lastUpdate = user.lastLocationUpdate else { return false }
         let hourAgo = Date().addingTimeInterval(-3600) // 1 hour ago
         return lastUpdate > hourAgo
@@ -178,9 +179,7 @@ struct HomeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showingProfile = true
-                    }) {
+                    NavigationLink(destination: ProfileView()) {
                         AsyncImage(url: URL(string: profileImageUrl)) { image in
                             image
                                 .resizable()
@@ -195,12 +194,12 @@ struct HomeView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingProfile) {
-                ProfileView()
-            }
             .onAppear {
-                fetchUserInfo()
-                fetchRunners()
+                Task {
+                    await fetchUserInfo()
+                    await fetchRunners()
+                    await fetchInterests()
+                }
             }
             .refreshable {
                 // Refresh all content
@@ -217,61 +216,45 @@ struct HomeView: View {
         }
     }
     
-    private func fetchRunners() {
+    private func fetchRunners() async {
         let db = Firestore.firestore()
         
-        db.collection("users")
-            .getDocuments { snapshot, error in
-                if let error = error {
-                    print("Error fetching users: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard let documents = snapshot?.documents else {
-                    print("No documents found")
-                    return
-                }
-                
-                self.users = documents.compactMap { document in
-                    User(id: document.documentID, data: document.data())
-                }
-                
-                print("Fetched \(self.users.count) users")
+        do {
+            let snapshot = try await db.collection("users").getDocuments()
+            self.users = snapshot.documents.compactMap { document in
+                UserApp(id: document.documentID, data: document.data())
             }
+            print("Fetched \(self.users.count) users")
+        } catch {
+            print("Error fetching users (HomeView): \(error.localizedDescription)")
+        }
     }
     
-    private func fetchInterests() {
+    private func fetchInterests() async {
         print("🔍 Fetching interests...")
         let db = Firestore.firestore()
-        db.collection("interests")
-            .order(by: "name")
-            .getDocuments { querySnapshot, error in
-                if let error = error {
-                    print("❌ Error fetching interests: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard let documents = querySnapshot?.documents else {
-                    print("⚠️ No interest documents found")
-                    return
-                }
-                
-                print("📄 Found \(documents.count) interests")
-                self.interests = documents.map { document in
-                    let interest = Interest(id: document.documentID, data: document.data())
-                    print("🏷 Interest: \(interest.name), Icon: \(interest.iconName)")
-                    return interest
-                }
-                print("✅ Interests loaded: \(self.interests.count)")
+        
+        do {
+            let querySnapshot = try await db.collection("interests").order(by: "name").getDocuments()
+            self.interests = querySnapshot.documents.map { document in
+                let interest = Interest(id: document.documentID, data: document.data())
+                print("🏷 Interest: \(interest.name), Icon: \(interest.iconName)")
+                return interest
             }
+            print("✅ Interests loaded: \(self.interests.count)")
+        } catch {
+            print("❌ Error fetching interests: \(error.localizedDescription)")
+        }
     }
     
-    private func fetchUserInfo() {
+    private func fetchUserInfo() async {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
         let db = Firestore.firestore()
-        db.collection("users").document(userId).getDocument { document, error in
-            if let document = document, document.exists {
+        
+        do {
+            let document = try await db.collection("users").document(userId).getDocument()
+            if document.exists {
                 if let name = document.data()?["name"] as? String {
                     self.userName = name.components(separatedBy: " ").first ?? name
                 }
@@ -279,6 +262,8 @@ struct HomeView: View {
                     self.profileImageUrl = imageUrl
                 }
             }
+        } catch {
+            print("Error fetching user info: \(error.localizedDescription)")
         }
     }
     
@@ -349,24 +334,9 @@ struct HomeView: View {
     }
     
     private func refreshContent() async {
-        // Use async/await to handle the refresh
-        await withCheckedContinuation { continuation in
-            isLoading = true
-            
-            // Fetch interests
-            let db = Firestore.firestore()
-            db.collection("interests")
-                .getDocuments { snapshot, error in
-                    if let error = error {
-                        print("Error refreshing interests: \(error.localizedDescription)")
-                    } else if let documents = snapshot?.documents {
-                        interests = documents.map { Interest(id: $0.documentID, data: $0.data()) }
-                    }
-                    
-                    isLoading = false
-                    continuation.resume()
-                }
-        }
+        isLoading = true
+        await fetchInterests()
+        isLoading = false
     }
 }
 
@@ -536,70 +506,9 @@ struct ActionButton: View {
     }
 }
 
-// struct RunnerCardView: View {
-//     let runner: Runner
-//     let users: [User]
-//     let locationManager: LocationManager    
-//     private func calculateDistance() -> String? {
-//         guard let currentLocation = locationManager.location,
-//               let user = users.first(where: { $0.id == runner.id }),
-//               let userLocation = user.locationAsCLLocation() else {
-//             return nil
-//         }
-//         let distance = currentLocation.distance(from: userLocation)
-//         return String(format: "%.1f km", distance / 1000)
-//     }
-    
-//     var body: some View {
-//         NavigationLink(destination: RunnerDetailView(runner: runner)) {
-//             VStack(alignment: .leading, spacing: 8) {
-//                 // Profile Image
-//                 AsyncImage(url: URL(string: runner.profileImageUrl)) { image in
-//                     image
-//                         .resizable()
-//                         .aspectRatio(contentMode: .fill)
-//                 } placeholder: {
-//                     Rectangle()
-//                         .fill(Color.gray.opacity(0.3))
-//                         .overlay(
-//                             Image(systemName: "person.fill")
-//                                 .foregroundColor(.white)
-//                         )
-//                 }
-//                 .frame(width: 160, height: 200)
-//                 .clipShape(RoundedRectangle(cornerRadius: 20))
-                
-//                 // Runner Info
-//                 VStack(alignment: .leading, spacing: 4) {
-//                     Text(runner.name)
-//                         .font(.headline)
-//                         .lineLimit(1)
-                    
-//                     if let distance = calculateDistance() {
-//                         Text(distance)
-//                             .font(.subheadline)
-//                             .foregroundColor(.gray)
-//                     }
-                    
-//                     Text(runner.city)
-//                         .font(.subheadline)
-//                         .foregroundColor(.gray)
-//                         .lineLimit(1)
-//                 }
-//                 .padding(.horizontal, 8)
-//                 .padding(.bottom, 8)
-//             }
-//             .background(Color.white)
-//             .clipShape(RoundedRectangle(cornerRadius: 20))
-//             .shadow(radius: 5)
-//             .frame(width: 160)
-//         }
-//     }
-// }
-
 struct AllRunnersView: View {
     let runners: [Runner]
-    let users: [User]
+    let users: [UserApp]
     let locationManager: LocationManager
 
     @Environment(\.dismiss) private var dismiss
