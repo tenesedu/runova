@@ -1,6 +1,7 @@
 import SwiftUI
 import FirebaseAuth
 
+@MainActor
 final class SignInEmailViewModel: ObservableObject {
     @Published var email: String = ""
     @Published var password: String = ""
@@ -8,14 +9,24 @@ final class SignInEmailViewModel: ObservableObject {
     @Published var isLoginSuccessful: Bool = false
     @Published var showingSignUp: Bool = false
 
-    func login() {
-        Auth.auth().signIn(withEmail: email, password: password) { result, error in
-            if let error = error {
-                self.errorMessage = error.localizedDescription
-                print("Login error: \(self.errorMessage)")
-            } else {
-                self.isLoginSuccessful = true
-                print("Login successful!")
+    func signIn() {
+        Task {
+            do {
+                guard !email.isEmpty else {
+                    errorMessage = "Email is required"
+                    return
+                }
+
+                guard !password.isEmpty else {
+                    errorMessage = "Password is required"
+                    return
+                }
+
+                let authDataResult = try await AuthenticationManager.shared.signIn(email: email, password: password)
+                print("User signed in: \(authDataResult.uid)")
+                isLoginSuccessful = true
+            } catch {
+                errorMessage = error.localizedDescription
             }
         }
     }
@@ -48,7 +59,7 @@ struct SignInEmailView: View {
                 }
 
                 Button(action: {
-                    viewModel.login()
+                    viewModel.signIn()
                 }) {
                     Text("Login")
                         .foregroundColor(.white)
