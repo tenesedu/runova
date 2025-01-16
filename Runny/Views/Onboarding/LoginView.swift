@@ -1,11 +1,28 @@
 import SwiftUI
 import FirebaseAuth
 
+final class LoginViewModel: ObservableObject {
+    @Published var email: String = ""
+    @Published var password: String = ""
+    @Published var errorMessage: String = ""
+    @Published var isLoginSuccessful: Bool = false
+    @Published var showingSignUp: Bool = false
+
+    func login() {
+        Auth.auth().signIn(withEmail: email, password: password) { result, error in
+            if let error = error {
+                self.errorMessage = error.localizedDescription
+                print("Login error: \(self.errorMessage)")
+            } else {
+                self.isLoginSuccessful = true
+                print("Login successful!")
+            }
+        }
+    }
+}
+
 struct LoginView: View {
-    @State private var email: String = ""
-    @State private var password: String = ""
-    @State private var errorMessage: String = ""
-    @State private var isLoginSuccessful: Bool = false
+    @StateObject private var viewModel = LoginViewModel()
     @State private var showingSignUp: Bool = false
 
     var body: some View {
@@ -15,23 +32,23 @@ struct LoginView: View {
                     .font(.largeTitle)
                     .padding()
 
-                TextField("Email", text: $email)
+                TextField("Email", text: $viewModel.email)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .autocapitalization(.none)
                     .padding()
 
-                SecureField("Password", text: $password)
+                SecureField("Password", text: $viewModel.password)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding()
 
-                if !errorMessage.isEmpty {
-                    Text(errorMessage)
+                if !viewModel.errorMessage.isEmpty {
+                    Text(viewModel.errorMessage)
                         .foregroundColor(.red)
                         .padding()
                 }
 
                 Button(action: {
-                    login()
+                    viewModel.login()
                 }) {
                     Text("Login")
                         .foregroundColor(.white)
@@ -58,23 +75,11 @@ struct LoginView: View {
             }
             .padding()
             .navigationTitle("Login")
-            .fullScreenCover(isPresented: $isLoginSuccessful) {
+            .fullScreenCover(isPresented: $viewModel.isLoginSuccessful) {
                 HomeView()
             }
-            .sheet(isPresented: $showingSignUp) {
+            .sheet(isPresented: $viewModel.showingSignUp) {
                 SignUpView()
-            }
-        }
-    }
-
-    private func login() {
-        Auth.auth().signIn(withEmail: email, password: password) { result, error in
-            if let error = error {
-                errorMessage = error.localizedDescription
-                print("Login error: \(errorMessage)")
-            } else {
-                isLoginSuccessful = true
-                print("Login successful!")
             }
         }
     }
