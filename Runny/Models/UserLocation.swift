@@ -8,10 +8,10 @@ struct UserLocation: Identifiable {
       let name: String
       let imageURL: String
       let coordinate: CLLocationCoordinate2D
-      let user: User
+      let user: UserApp
       
       // Initialize UserLocation from a User
-      init(user: User) {
+      init(user: UserApp) {
           self.id = user.id
           self.name = user.name
           self.imageURL = user.profileImageUrl

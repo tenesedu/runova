@@ -19,10 +19,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct RunnyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var authState = AuthenticationState()
  
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(authState)
         }
     }
 }

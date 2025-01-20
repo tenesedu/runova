@@ -120,4 +120,9 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         authorizationStatus = manager.authorizationStatus
         checkLocationAuthorization()
     }
+    
+    func stopUpdatingLocation() {
+        locationManager.stopUpdatingLocation()
+        print("Stopped location updates")
+    }
 }

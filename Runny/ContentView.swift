@@ -10,7 +10,7 @@ import FirebaseAuth
 import FirebaseFirestore
 
 struct ContentView: View {
-    @StateObject private var authState = AuthenticationState()
+    @EnvironmentObject private var authState: AuthenticationState
     
     var body: some View {
         Group {
@@ -25,6 +25,7 @@ struct ContentView: View {
             }
         }   
         .onAppear {
+            
             authState.listen()
         }
     }
@@ -32,31 +33,78 @@ struct ContentView: View {
 
 class AuthenticationState: ObservableObject {
     @Published var isAuthenticated = false
-    @Published var hasCompletedOnboarding = true  // Default to true for existing users
+    @Published var hasCompletedOnboarding = false
     private var handler: AuthStateDidChangeListenerHandle?
+    private var userListener: ListenerRegistration?
+    
+    func stopListening() {
+        handler = nil
+        userListener?.remove()
+        userListener = nil
+        print("Stopped auth listeners")
+    }
     
     func listen() {
+        stopListening()
+        
         handler = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             if let userId = user?.uid {
-                // User is logged in
                 self?.isAuthenticated = true
-                
-                // Only check onboarding status for new users (those who just signed up)
-                let db = Firestore.firestore()
-                db.collection("users").document(userId).getDocument { document, _ in
-                    if let document = document,
-                       let onboardingCompleted = document.data()?["onboardingCompleted"] as? Bool {
-                        self?.hasCompletedOnboarding = onboardingCompleted
-                    } else {
-                        // If the field doesn't exist, assume the user has completed onboarding
-                        self?.hasCompletedOnboarding = true
-                    }
-                }
+                self?.setupUserListener(userId: userId)
             } else {
-                // User is logged out
                 self?.isAuthenticated = false
-                self?.hasCompletedOnboarding = true
+                self?.hasCompletedOnboarding = false
+                self?.userListener?.remove()
+                self?.userListener = nil
             }
+        }
+    }
+    
+    private func setupUserListener(userId: String) {
+        let db = Firestore.firestore()
+        userListener = db.collection("users").document(userId)
+            .addSnapshotListener { [weak self] document, _ in
+                if let document = document,
+                   let onboardingCompleted = document.data()?["onboardingCompleted"] as? Bool {
+                    self?.hasCompletedOnboarding = onboardingCompleted
+                } else {
+                    self?.hasCompletedOnboarding = false
+                }
+            }
+    }
+    
+    deinit {
+        handler = nil
+        userListener?.remove()
+    }
+    
+    func handleAccountDeletion() {
+        print("Handling account deletion...")
+        // First set state to trigger cleanup
+        isAuthenticated = false
+        hasCompletedOnboarding = true
+        
+        // Then stop listeners
+        stopListening()
+        
+        // Clear user defaults
+        UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
+    }
+    
+    func handleLogout() {
+        print("Handling logout...")
+        do {
+            // First set state to trigger cleanup
+            isAuthenticated = false
+            hasCompletedOnboarding = true
+            
+            // Then stop listeners
+            stopListening()
+            
+            // Finally sign out
+            try Auth.auth().signOut()
+        } catch {
+            print("Error signing out: \(error.localizedDescription)")
         }
     }
 }

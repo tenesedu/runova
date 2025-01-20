@@ -7,9 +7,9 @@ import CoreLocation
 struct MapView: View {
     @StateObject private var locationManager = LocationManager()
     @State private var position: MapCameraPosition = .userLocation(fallback: .automatic)
-    @State private var users: [User] = []
+    @State private var users: [UserApp] = []
     @State private var showingUserProfile = false
-    @State private var selectedUser: User?
+    @State private var selectedUser: UserApp?
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @State private var selectedResult: MKMapItem?
@@ -17,8 +17,11 @@ struct MapView: View {
         center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
+    @State private var selectedRange: Double = 25.0
+    @State private var availableRanges = [10.0, 25.0, 50.0, 100.0]
+    @State private var radarAnimationAmount = 1.0
     
-    private var runnersWithin25km: [User] {
+    private var runnersInRange: [UserApp] {
         guard let currentLocation = locationManager.location else {
             print("No location available")
             return []
@@ -33,23 +36,35 @@ struct MapView: View {
             let distance = currentLocation.distance(from: userLocation)
             let isRecent = isLocationRecent(user: user)
             
-            return distance <= 25000 && isRecent // 25km radius and recent location
+            return distance <= (selectedRange * 1000) && isRecent
         }
         
-        print("Found \(filteredUsers.count) runners within 25km")
-        return filteredUsers
+        // Sort users by distance
+        let sortedUsers = filteredUsers.sorted { user1, user2 in
+            guard let location1 = user1.locationAsCLLocation(),
+                  let location2 = user2.locationAsCLLocation() else {
+                return false
+            }
+            
+            let distance1 = currentLocation.distance(from: location1)
+            let distance2 = currentLocation.distance(from: location2)
+            
+            return distance1 < distance2
+        }
+        
+        print("Found \(sortedUsers.count) runners within \(selectedRange)km")
+        return sortedUsers
     }
     
-    private func isLocationRecent(user: User) -> Bool {
+    private func isLocationRecent(user: UserApp) -> Bool {
         guard let lastUpdate = user.lastLocationUpdate else { return false }
-        let hourAgo = Date().addingTimeInterval(-3600) // 1 hour ago
+        let hourAgo = Date().addingTimeInterval(-3600)
         return lastUpdate > hourAgo
     }
     
     var body: some View {
         ZStack(alignment: .top) {
             Map(position: $position) {
-                // Show current user location with custom marker
                 if let location = locationManager.location,
                    let currentUserId = Auth.auth().currentUser?.uid,
                    let currentUser = users.first(where: { $0.id == currentUserId }) {
@@ -61,25 +76,47 @@ struct MapView: View {
                     }
                 }
                 
-                // Show other users
-                ForEach(runnersWithin25km) { user in
+                ForEach(runnersInRange) { user in
                     if let userLocation = user.locationAsCLLocation(),
                        user.id != Auth.auth().currentUser?.uid {
                         Annotation("", coordinate: userLocation.coordinate) {
                             UserMapMarker(user: user) {
                                 selectedUser = user
-                                showingUserProfile = true
+                                if let selectedUser = selectedUser {
+                                    let runner = Runner(user: selectedUser)
+                                    NavigationLink(destination: RunnerDetailView(runner: runner)) {
+                                        EmptyView()
+                                    }
+                                }
                             }
                         }
                     }
                 }
                 
-                // Show selected search result pin
                 if let selectedResult = selectedResult {
                     Annotation("Selected Location", coordinate: selectedResult.placemark.coordinate) {
                         Image(systemName: "mappin.circle.fill")
                             .font(.title)
                             .foregroundColor(.red)
+                    }
+                }
+                
+                if let location = locationManager.location {
+                    Annotation("", coordinate: location.coordinate) {
+                        ZStack {
+                            Circle()
+                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                .frame(width: 100)
+                            
+                            Circle()
+                                .stroke(Color.blue.opacity(0.2), lineWidth: 1.5)
+                                .frame(width: 100 * radarAnimationAmount)
+                                .animation(
+                                    Animation.easeInOut(duration: 2)
+                                        .repeatForever(autoreverses: false),
+                                    value: radarAnimationAmount
+                                )
+                        }
                     }
                 }
             }
@@ -90,7 +127,6 @@ struct MapView: View {
             }
             .ignoresSafeArea()
             
-            // Location Button - Top Right
             VStack {
                 Button(action: {
                     if let location = locationManager.location {
@@ -122,34 +158,37 @@ struct MapView: View {
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
             
-            // Bottom runners panel
+            VStack {
+                RangeSelector(selectedRange: $selectedRange, availableRanges: availableRanges)
+                    .padding(.top, UIApplication.shared.windows.first?.safeAreaInsets.top ?? 44)
+                    .padding(.horizontal)
+                
+                Spacer()
+            }
+            
             VStack {
                 Spacer()
-                RunnersPanel(runnersWithin25km: runnersWithin25km, locationManager: locationManager) { user in
-                    selectedUser = user
-                    showingUserProfile = true
-                }
+                RunnersPanel(
+                    runnersInRange: runnersInRange,
+                    locationManager: locationManager,
+                    onUserSelected: { user in
+                        selectedUser = user
+                        showingUserProfile = true
+                    },
+                    selectedRange: selectedRange
+                )
             }
         }
         .edgesIgnoringSafeArea(.all)
         .onAppear {
-        
             locationManager.requestLocation()
             if users.isEmpty {
                 startListeningToUsers()
             }
             
-        }
-        .sheet(item: $selectedUser) { user in
-           
-                NavigationView {
-                    RunnerDetailView(runner: Runner(user: user))
-                        .navigationBarItems(trailing: Button("Done") {
-                            showingUserProfile = false
-                            selectedUser = nil
-                        })
-                }
-            
+            withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
+                radarAnimationAmount = 2.0
+            }
         }
         .alert("Location Access Required", 
                isPresented: .constant(!locationManager.isLocationEnabled && locationManager.authorizationStatus != .notDetermined)) {
@@ -173,7 +212,7 @@ struct MapView: View {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = searchText
         request.region = MKCoordinateRegion(
-            center: locationManager.location?.coordinate ?? CLLocationCoordinate2D(latitude: 40.4168, longitude: -3.7038), // Madrid center as default
+            center: locationManager.location?.coordinate ?? CLLocationCoordinate2D(latitude: 40.4168, longitude: -3.7038),
             latitudinalMeters: 50000,
             longitudinalMeters: 50000
         )
@@ -191,9 +230,7 @@ struct MapView: View {
                     return 
                 }
                 
-                // Simplify results sorting
                 self.searchResults = response.mapItems.sorted { item1, item2 in
-                    // Get full addresses
                     let address1 = [
                         item1.name,
                         item1.placemark.thoroughfare,
@@ -206,7 +243,6 @@ struct MapView: View {
                         item2.placemark.locality
                     ].compactMap { $0 }.joined(separator: ", ")
                     
-                    // Simple string matching
                     return address1.localizedStandardContains(self.searchText)
                 }
             }
@@ -225,8 +261,7 @@ struct MapView: View {
         searchResults = []
     }
     
-    // Computed property to sort users by distance
-    private var nearbyUsers: [User] {
+    private var nearbyUsers: [UserApp] {
         guard let currentLocation = locationManager.location else { return users }
         
         return users.sorted { user1, user2 in
@@ -235,7 +270,6 @@ struct MapView: View {
                 return false
             }
             
-            // Compare the distances from the current location
             return currentLocation.distance(from: location1) < currentLocation.distance(from: location2)
         }
     }
@@ -244,11 +278,10 @@ struct MapView: View {
         print("Starting to listen for nearby users...")
         let db = Firestore.firestore()
         
-        // Remove the time filter initially to see if we get any users
         db.collection("users")
             .addSnapshotListener { snapshot, error in
                 if let error = error {
-                    print("Error fetching users: \(error.localizedDescription)")
+                    print("Error fetching users (MapView): \(error.localizedDescription)")
                     return
                 }
                 
@@ -259,32 +292,44 @@ struct MapView: View {
                 
                 self.users = documents.compactMap { document in
                     let data = document.data()
-                    let user = User(id: document.documentID, data: data)
-        
+                    let user = UserApp(id: document.documentID, data: data)
                     return user
                 }
+                
+                // Print user details with proper optional handling
                 for user in self.users {
-                    print(user.name)
-                    print(user.lastLocationUpdate)
-                    print(user.location)
+                    print("User: \(user.name)")
+                    if let lastUpdate = user.lastLocationUpdate {
+                        print("Last location update: \(lastUpdate)")
+                    } else {
+                        print("No location update available")
+                    }
+                    if let location = user.location {
+                        print("Location: lat: \(location.latitude), lon: \(location.longitude)")
+                    } else {
+                        print("No location available")
+                    }
                 }
                 print("Fetched \(self.users.count) total users")
-                
             }
     }
     
     struct UserMapMarker: View {
-        let user: User
+        let user: UserApp
         let action: () -> Void
         @State private var profileImage: UIImage?
+        @State private var navigateToProfile = false
         
         var isCurrentUser: Bool {
             user.id == Auth.auth().currentUser?.uid
         }
         
         var body: some View {
+            NavigationLink(destination: RunnerDetailView(runner: Runner(user: user)), isActive: $navigateToProfile) {
+                EmptyView()
+            }
+            
             VStack(spacing: 4) {
-                // Profile Image
                 Group {
                     if let profileImage = profileImage {
                         Image(uiImage: profileImage)
@@ -307,7 +352,6 @@ struct MapView: View {
                 )
                 .shadow(radius: 3)
                 
-                // Name Label
                 Text(isCurrentUser ? "You" : user.name)
                     .font(.caption)
                     .fontWeight(.medium)
@@ -320,9 +364,9 @@ struct MapView: View {
                             .shadow(radius: 1)
                     )
             }
-            .contentShape(Rectangle()) 
+            .contentShape(Rectangle())
             .onTapGesture {
-                action()
+                navigateToProfile = true
             }
             .onAppear {
                 loadProfileImage()
@@ -407,23 +451,23 @@ struct MapView: View {
     }
     
     struct RunnersPanel: View {
-        let runnersWithin25km: [User]
+        let runnersInRange: [UserApp]
         let locationManager: LocationManager
-        let onUserSelected: (User) -> Void
+        let onUserSelected: (UserApp) -> Void
+        let selectedRange: Double
 
         @State private var isExpanded = false
         
         var body: some View {
             VStack(spacing: 0) {
-                // Header
                 HStack {
-                    Text("\(runnersWithin25km.count) Runners Nearby")
+                    Text("\(runnersInRange.count) Runners within \(Int(selectedRange))km")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.primary)
                     
                     Spacer()
                     
-                    if !runnersWithin25km.isEmpty {
+                    if !runnersInRange.isEmpty {
                         Button(action: {
                             withAnimation {
                                 isExpanded.toggle()
@@ -437,8 +481,7 @@ struct MapView: View {
                 .padding(.horizontal)
                 .padding(.top, 12)
                 
-                // Content
-                if runnersWithin25km.isEmpty {
+                if runnersInRange.isEmpty {
                     HStack {
                         Spacer()
                         Text("No runners in your area")
@@ -450,7 +493,7 @@ struct MapView: View {
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 16) {
-                            ForEach(runnersWithin25km) { user in
+                            ForEach(runnersInRange) { user in
                                 NearbyRunnerCard(user: user, isExpanded: isExpanded, locationManager: locationManager, action: {
                                     onUserSelected(user)
                                 })
@@ -465,12 +508,12 @@ struct MapView: View {
                 Rectangle()
                     .fill(.ultraThinMaterial)
             )
-            .frame(height: runnersWithin25km.isEmpty ? 160 : (isExpanded ? 380 : 180)) // Increased minimum height
+            .frame(height: runnersInRange.isEmpty ? 160 : (isExpanded ? 380 : 180))
         }
     }
     
     struct NearbyRunnerCard: View {
-        let user: User
+        let user: UserApp
         let isExpanded: Bool
         let locationManager: LocationManager
         let action: () -> Void
@@ -482,9 +525,7 @@ struct MapView: View {
                 VStack(alignment: .leading, spacing: 0) {
                  
                     
-                    // Profile Image with overlays
                     ZStack {
-                        // Profile Image
                         Group {
                             if let profileImage = profileImage {
                                 Image(uiImage: profileImage)
@@ -501,9 +542,7 @@ struct MapView: View {
                         }
                         .frame(width: 120, height: 160)
                         
-                        // Overlays
                         VStack(alignment: .leading, spacing: 0) {
-                            // Distance at top
                             if !distance.isEmpty {
                                 Text(distance.isEmpty ? "Location unavailable" : "\(distance) away")
                                     .font(.system(size: 12))
@@ -518,9 +557,7 @@ struct MapView: View {
                             
                             Spacer()
                             
-                            // Name at bottom with gradient background
                             ZStack {
-                                // Gradient just for the name area
                                 LinearGradient(
                                     gradient: Gradient(
                                         colors: [.clear, .black.opacity(0.7)]
@@ -574,11 +611,44 @@ struct MapView: View {
             let userLocation = user.locationAsCLLocation() {
                 let distanceInMeters = currentLocation.distance(from: userLocation)
                 distance = String(format: "%.1f km", distanceInMeters / 1000)
-                print("Calculated distance: \(distance)") // Debug log
+                print("Calculated distance: \(distance)")
             } else {
-                print("Unable to calculate distance: currentLocation or userLocation is nil") // Debug log
+                print("Unable to calculate distance: currentLocation or userLocation is nil")
             }
         }
 
+    }
+    
+    struct RangeSelector: View {
+        @Binding var selectedRange: Double
+        let availableRanges: [Double]
+        
+        var body: some View {
+            HStack {
+                ForEach(availableRanges, id: \.self) { range in
+                    Button(action: {
+                        withAnimation {
+                            selectedRange = range
+                        }
+                    }) {
+                        Text("\(Int(range))km")
+                            .font(.system(size: 12, weight: .medium))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(selectedRange == range ? Color.blue : Color.white)
+                            )
+                            .foregroundColor(selectedRange == range ? .white : .blue)
+                    }
+                }
+            }
+            .padding(4)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.ultraThinMaterial)
+            )
+            .shadow(radius: 2)
+        }
     }
 }

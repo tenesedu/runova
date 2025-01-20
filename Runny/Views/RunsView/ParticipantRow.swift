@@ -1,47 +1,35 @@
 import SwiftUI
 
 struct ParticipantRow: View {
-    let participant: UserProfile
+    let participant: Runner
     
     var body: some View {
-        HStack(spacing: 12) {
-            // User Avatar
-            if let image = participant.profileImage {
-                Image(uiImage: image)
+        HStack {
+            // Profile Image
+            AsyncImage(url: URL(string: participant.profileImageUrl)) { image in
+                image
                     .resizable()
                     .scaledToFill()
                     .frame(width: 40, height: 40)
                     .clipShape(Circle())
-            } else {
+            } placeholder: {
                 Circle()
                     .fill(Color.gray.opacity(0.2))
                     .frame(width: 40, height: 40)
                     .overlay(Text("👤"))
             }
             
-            // User Info
             VStack(alignment: .leading, spacing: 4) {
                 Text(participant.name)
-                    .font(.headline)
+                    .font(.system(size: 16, weight: .medium))
+                
                 Text(participant.city)
-                    .font(.caption)
+                    .font(.system(size: 14))
                     .foregroundColor(.gray)
             }
             
             Spacer()
-            
-            // Pace Info
-            Text(participant.averagePace)
-                .font(.subheadline)
-                .foregroundColor(.blue)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(20)
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(15)
-        .shadow(color: Color.black.opacity(0.05), radius: 5)
+        .padding(.vertical, 8)
     }
 } 

@@ -12,7 +12,9 @@ struct HomeView: View {
     @State private var userName: String = ""
     @State private var profileImageUrl: String = ""
     @State private var searchText: String = ""
+    @State private var showingNotifications = false
     @StateObject private var locationManager = LocationManager()
+    @StateObject private var notificationManager = NotificationManager()
     
     var filteredRunners: [Runner] {
         if searchText.isEmpty {
@@ -178,45 +180,63 @@ struct HomeView: View {
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { showingNotifications = true }) {
+                        ZStack {
+                            Image(systemName: "bell.fill")
+                                .imageScale(.small)
+                            if notificationManager.unreadNotifications > 0 {
+                                Text("\(notificationManager.unreadNotifications)")
+                                    .font(.system(size: 10))
+                                    .padding(4)
+                                    .background(Color.red)
+                                    .clipShape(Circle())
+                                    .offset(x: 8, y: -8)
+                            }
+                        }
+                    }
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: ProfileView()) {
                         AsyncImage(url: URL(string: profileImageUrl)) { image in
                             image
                                 .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 40, height: 40)
+                                .scaledToFill()
+                                .frame(width: 32, height: 32)
                                 .clipShape(Circle())
                         } placeholder: {
                             Circle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 40, height: 40)
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(width: 32, height: 32)
+                                .overlay(Text("👤").font(.system(size: 16)))
                         }
                     }
                 }
             }
+            .sheet(isPresented: $showingNotifications) {
+                NotificationsView()
+            }
             .onAppear {
+                
+                locationManager.requestLocation()
                 Task {
-                    await fetchUserInfo()
-                    await fetchRunners()
+                    await fetchUserProfile()
+                    await fetchUsers()
                     await fetchInterests()
+                    
                 }
+                notificationManager.fetchNotifications()
             }
             .refreshable {
-                // Refresh all content
-                await refreshContent()
+                Task {
+                    await fetchUsers()
+                }
             }
-            .navigationBarItems(leading: Button(action: {
-                // Action for notification button
-                print("Notification button tapped")
-            }) {
-                Image(systemName: "bell.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(.black)
-            })
         }
     }
     
-    private func fetchRunners() async {
+    private func fetchUsers() async {
         let db = Firestore.firestore()
         
         do {
@@ -247,7 +267,7 @@ struct HomeView: View {
         }
     }
     
-    private func fetchUserInfo() async {
+    private func fetchUserProfile() async {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
         let db = Firestore.firestore()
@@ -266,7 +286,6 @@ struct HomeView: View {
             print("Error fetching user info: \(error.localizedDescription)")
         }
     }
-    
     
     // Helper function for consistent runner card design
     private func runnerCard(for runner: Runner) -> some View {
@@ -332,14 +351,7 @@ struct HomeView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
     }
-    
-    private func refreshContent() async {
-        isLoading = true
-        await fetchInterests()
-        isLoading = false
-    }
 }
-
 
 struct RunnerCard: View {
     let runner: Runner

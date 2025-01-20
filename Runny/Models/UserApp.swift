@@ -14,6 +14,8 @@ struct UserApp: Identifiable {
     let interests: [String]
     let location: GeoPoint?
     let lastLocationUpdate: Date?
+    let conversations: [String] // Array of conversation IDs
+    let friends: [String] // Array of friend user IDs
     
     var isActive: Bool {
         guard let lastUpdate = lastLocationUpdate else { return false }
@@ -32,6 +34,8 @@ struct UserApp: Identifiable {
         self.goals = data["goals"] as? [String] ?? []
         self.interests = data["interests"] as? [String] ?? []
         self.location = data["location"] as? GeoPoint
+        self.conversations = data["conversations"] as? [String] ?? []
+        self.friends = data["friends"] as? [String] ?? []
         
         if let timestamp = data["lastLocationUpdate"] as? Timestamp {
             self.lastLocationUpdate = timestamp.dateValue()

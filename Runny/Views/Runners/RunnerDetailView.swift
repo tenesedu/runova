@@ -20,33 +20,75 @@ struct RunnerDetailView: View {
             VStack(spacing: 25) {
                 // Profile Image Section
                 ZStack {
-                    Color.blue.opacity(0.1)
-                        .frame(height: 200)
-                        .clipShape(RoundedRectangle(cornerRadius: 30))
-                    
                     if let image = profileImage {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFill()
-                            .frame(width: 120, height: 120)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.white, lineWidth: 4))
-                            .shadow(radius: 10)
+                            .frame(maxWidth: .infinity, maxHeight: 300)
+                            .overlay(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.clear, .black.opacity(0.7)]),
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .overlay(
+                                Text(runner.name)
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(),
+                                alignment: .bottomLeading
+                            )
                     } else {
-                        Circle()
-                            .fill(Color.white)
-                            .frame(width: 120, height: 120)
-                            .overlay(Text("👤").font(.system(size: 60)))
-                            .shadow(radius: 10)
+                        Rectangle()
+                            .fill(Color.blue.opacity(0.1))
+                            .frame(maxWidth: .infinity, maxHeight: 300)
+                            .overlay(
+                                VStack {
+                                    Text("👤")
+                                        .font(.system(size: 60))
+                                        .foregroundColor(.gray)
+                                    Text(runner.name)
+                                        .font(.system(size: 28, weight: .bold))
+                                        .foregroundColor(.black)
+                                }
+                            )
                     }
                 }
-                .padding(.bottom)
-                
+                // Action Buttons
+                HStack(spacing: 15) {
+                    // Connect Button
+                    Button(action: handleConnectionAction) {
+                        HStack {
+                            Image(systemName: connectionButtonIcon)
+                            Text(connectionButtonTitle)
+                        }
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(connectionButtonColor)
+                        .cornerRadius(10)
+                    }
+                    
+                    
+                    Button(action: startChat) {
+                        HStack {
+                            Image(systemName: "message.fill")
+                            Text("Message")
+                        }
+                        .foregroundColor(.black)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white)
+                        .cornerRadius(10)
+                        .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.black, lineWidth: 1)                             )
+                    }
+                }
+                .padding(.horizontal)
                 // Runner Info Section
                 VStack(spacing: 20) {
-                    Text(runner.name)
-                        .font(.system(size: 28, weight: .bold))
-                    
                     infoCard(title: "Personal Information") {
                         InfoRow(icon: "person.fill", title: "Gender", value: runner.gender)
                         InfoRow(icon: "mappin.circle.fill", title: "City", value: runner.city)
@@ -59,7 +101,6 @@ struct RunnerDetailView: View {
                             InfoRow(icon: "target", title: "", value: goal)
                         }
                     }
-                    
                     infoCard(title: "Interests") {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 10) {
                             ForEach(interests, id: \.self) { interest in
@@ -76,43 +117,16 @@ struct RunnerDetailView: View {
                 }
                 .padding(.horizontal)
                 
-                // Action Buttons
-                HStack(spacing: 15) {
-                    // Connect Button
-                    Button(action: handleConnectionAction) {
-                        HStack {
-                            Image(systemName: connectionButtonIcon)
-                            Text(connectionButtonTitle)
-                        }
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(connectionButtonColor)
-                        .cornerRadius(10)
-                    }
-                    
-                    // Message Button
-                    Button(action: startChat) {
-                        HStack {
-                            Image(systemName: "message.fill")
-                            Text("Message")
-                        }
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .cornerRadius(10)
-                    }
-                }
-                .padding(.horizontal)
+                
             }
         }
         .navigationBarTitleDisplayMode(.inline)
         .background(
             NavigationLink(
                 destination: Group {
-                    if let conversation = selectedConversation {
-                        ChatDetailView(conversation: conversation)
+                     if let conversation = selectedConversation {
+                         ChatDetailView(conversation: conversation, allowsDismiss: true)
+                             .navigationBarBackButtonHidden(false)
                     }
                 },
                 isActive: $isNavigatingToChat,
@@ -191,12 +205,66 @@ struct RunnerDetailView: View {
     }
     
     private func handleConnectionAction() {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+        
+        let db = Firestore.firestore()
+        
         switch connectionStatus {
         case .none:
-            connectionManager.sendConnectionRequest(to: runner.id)
+            // Show immediate feedback
             connectionStatus = .pending
-        default:
-            break
+            
+            let requestData: [String: Any] = [
+                "senderId": currentUserId,
+                "receiverId": runner.id,
+                "status": "pending",
+                "createdAt": FieldValue.serverTimestamp(),
+                "updatedAt": FieldValue.serverTimestamp()
+            ]
+            
+            db.collection("connectionRequests").addDocument(data: requestData) { error in
+                if let error = error {
+                    print("Error sending connection request: \(error.localizedDescription)")
+                    // Revert status if error
+                    connectionStatus = .none
+                }
+            }
+            
+        case .pending:
+            // Cancel request
+            db.collection("connectionRequests")
+                .whereField("senderId", isEqualTo: currentUserId)
+                .whereField("receiverId", isEqualTo: runner.id)
+                .whereField("status", isEqualTo: "pending")
+                .getDocuments { snapshot, error in
+                    if let document = snapshot?.documents.first {
+                        document.reference.updateData([
+                            "status": "cancelled",
+                            "updatedAt": FieldValue.serverTimestamp()
+                        ])
+                    }
+                }
+            
+        case .connected:
+            // Remove connection
+            let batch = db.batch()
+            
+            let currentUserRef = db.collection("users").document(currentUserId)
+            let otherUserRef = db.collection("users").document(runner.id)
+            
+            batch.updateData([
+                "friends": FieldValue.arrayRemove([runner.id])
+            ], forDocument: currentUserRef)
+            
+            batch.updateData([
+                "friends": FieldValue.arrayRemove([currentUserId])
+            ], forDocument: otherUserRef)
+            
+            batch.commit { error in
+                if let error = error {
+                    print("Error removing connection: \(error.localizedDescription)")
+                }
+            }
         }
     }
     
@@ -215,84 +283,123 @@ struct RunnerDetailView: View {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
         let db = Firestore.firestore()
+        let runnerId = runner.id
         
         // Check if conversation already exists
         db.collection("conversations")
+            .whereField("type", isEqualTo: "direct")
             .whereField("participants", arrayContains: currentUserId)
-            .getDocuments { snapshot, error in
+            .getDocuments(source: .default) { [runner = self.runner] snapshot, error in
                 if let error = error {
                     print("Error fetching conversations: \(error.localizedDescription)")
                     return
                 }
                 
                 if let documents = snapshot?.documents {
-                    // Look for existing conversation with this runner
+                    // Look for existing direct conversation with this runner
                     let existingConversation = documents.first { document in
                         let data = document.data()
                         let participants = data["participants"] as? [String] ?? []
-                        return participants.contains(runner.id)
+                        return participants.count == 2 &&
+                               participants.contains(runnerId)
                     }
                     
                     if let existing = existingConversation {
                         // Use existing conversation
                         let data = existing.data()
-                        self.selectedConversation = Conversation(
-                            id: existing.documentID,
-                            otherUserId: runner.id,
-                            lastMessage: data["lastMessage"] as? String ?? "",
-                            lastMessageTime: (data["lastMessageTime"] as? Timestamp)?.dateValue() ?? Date(),
-                            unreadCount: data["unreadCount.\(currentUserId)"] as? Int ?? 0,
-                            otherUserProfile: UserProfile(
-                                id: runner.id,
-                                name: runner.name,
-                                age: runner.age,
-                                averagePace: runner.averagePace,
-                                city: runner.city,
-                                profileImageUrl: runner.profileImageUrl,
-                                gender: runner.gender
-                            )
-                        )
-                        self.isNavigatingToChat = true
-                    } else {
-                        // Create new conversation
-                        let newConversationRef = db.collection("conversations").document()
-                        let conversationData: [String: Any] = [
-                            "participants": [currentUserId, runner.id],
-                            "lastMessage": "",
-                            "lastMessageTime": FieldValue.serverTimestamp(),
-                            "unreadCount": [
-                                currentUserId: 0,
-                                runner.id: 0
-                            ]
-                        ]
-                        
-                        newConversationRef.setData(conversationData) { error in
-                            if let error = error {
-                                print("Error creating conversation: \(error.localizedDescription)")
-                                return
-                            }
-                            
-                            self.selectedConversation = Conversation(
-                                id: newConversationRef.documentID,
+                        DispatchQueue.main.async {
+                            var conversation = Conversation(
+                                id: existing.documentID,
+                                type: "direct",
+                                participants: data["participants"] as? [String] ?? [],
+                                createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                                createdBy: data["createdBy"] as? String ?? "",
+                                lastMessage: data["lastMessage"] as? String ?? "",
+                                lastMessageTime: (data["lastMessageTime"] as? Timestamp)?.dateValue() ?? Date(),
+                                lastMessageSenderId: data["lastMessageSenderId"] as? String ?? "",
+                                unreadCount: data["unreadCount"] as? [String: Int] ?? [:],
+                                groupName: nil,
+                                groupImageUrl: nil,
+                                groupDescription: nil,
+                                adminId: nil,
                                 otherUserId: runner.id,
-                                lastMessage: "",
-                                lastMessageTime: Date(),
-                                unreadCount: 0,
-                                otherUserProfile: UserProfile(
-                                    id: runner.id,
-                                    name: runner.name,
-                                    age: runner.age,
-                                    averagePace: runner.averagePace,
-                                    city: runner.city,
-                                    profileImageUrl: runner.profileImageUrl,
-                                    gender: runner.gender
-                                )
+                                deletedFor: data["deletedFor"] as? [String: Bool] ?? [:],
+                                deletedAt: (data["deletedAt"] as? [String: Timestamp] ?? [:]).mapValues { $0.dateValue() }
                             )
+                            conversation.otherUserProfile = runner
+                            self.selectedConversation = conversation
                             self.isNavigatingToChat = true
                         }
+                    } else {
+                        createNewConversation(currentUserId: currentUserId)
                     }
                 }
             }
+    }
+    
+    private func createNewConversation(currentUserId: String) {
+        let db = Firestore.firestore()
+        let newConversationRef = db.collection("conversations").document()
+        let participants = [currentUserId, runner.id]
+        let runnerCopy = runner // Capture runner locally
+        
+        let conversationData: [String: Any] = [
+            "type": "direct",
+            "participants": participants,
+            "createdAt": FieldValue.serverTimestamp(),
+            "createdBy": currentUserId,
+            "lastMessage": "",
+            "lastMessageTime": FieldValue.serverTimestamp(),
+            "unreadCount": participants.reduce(into: [String: Int]()) { dict, id in
+                dict[id] = 0
+            }
+        ]
+        
+        // Create batch
+        let batch = db.batch()
+        
+        // Set the conversation data
+        batch.setData(conversationData, forDocument: newConversationRef)
+        
+        // Update both users' conversation arrays
+        for userId in participants {
+            let userRef = db.collection("users").document(userId)
+            batch.updateData([
+                "conversations": FieldValue.arrayUnion([newConversationRef.documentID])
+            ], forDocument: userRef)
+        }
+        
+        // Commit the batch once
+        batch.commit { error in
+            if let error = error {
+                print("Error creating conversation: \(error.localizedDescription)")
+                return
+            }
+            
+            DispatchQueue.main.async {
+                var conversation = Conversation(
+                    id: newConversationRef.documentID,
+                    type: "direct",
+                    participants: participants,
+                    createdAt: Date(),
+                    createdBy: currentUserId,
+                    lastMessage: "",
+                    lastMessageTime: Date(),
+                    lastMessageSenderId: currentUserId,
+                    unreadCount: participants.reduce(into: [String: Int]()) { dict, id in
+                        dict[id] = 0
+                    },
+                    groupName: nil,
+                    groupImageUrl: nil,
+                    groupDescription: nil,
+                    adminId: nil,
+                    otherUserId: runnerCopy.id
+                )
+                conversation.otherUserProfile = runnerCopy
+                self.selectedConversation = conversation
+                self.isNavigatingToChat = true
+            }
+        }
     }
 }
 

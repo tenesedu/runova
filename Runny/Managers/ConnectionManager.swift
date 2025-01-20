@@ -8,7 +8,8 @@ enum ConnectionStatus {
 }
 
 class ConnectionManager: ObservableObject {
-    @Published var pendingRequests: [ConnectionRequest] = []
+    @Published var receivedRequests: [ConnectionRequest] = []
+    @Published var sentRequests: [ConnectionRequest] = []
     @Published var connections: [String] = []
     
     private let db = Firestore.firestore()
@@ -29,19 +30,38 @@ class ConnectionManager: ObservableObject {
     func acceptConnectionRequest(requestId: String) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
+        // First get the request to get the sender ID
         db.collection("connectionRequests").document(requestId).getDocument { [weak self] snapshot, error in
-            guard let data = snapshot?.data(),
-                  let fromUserId = data["fromUserId"] as? String else { return }
+            guard let self = self,
+                  let data = snapshot?.data(),
+                  let senderId = data["senderId"] as? String else { return }
+            
+            let batch = self.db.batch()
             
             // Update request status
-            snapshot?.reference.updateData(["status": "accepted"])
+            let requestRef = self.db.collection("connectionRequests").document(requestId)
+            batch.updateData([
+                "status": "accepted",
+                "updatedAt": FieldValue.serverTimestamp()
+            ], forDocument: requestRef)
             
-            // Add to both users' connections
-            self?.addConnection(currentUserId: currentUserId, otherUserId: fromUserId)
+            // Add to both users' friends arrays
+            let currentUserRef = self.db.collection("users").document(currentUserId)
+            let senderRef = self.db.collection("users").document(senderId)
             
-            // Remove the request from the pending requests
-            if let index = self?.pendingRequests.firstIndex(where: { $0.id == requestId }) {
-                self?.pendingRequests.remove(at: index)
+            batch.updateData([
+                "friends": FieldValue.arrayUnion([senderId])
+            ], forDocument: currentUserRef)
+            
+            batch.updateData([
+                "friends": FieldValue.arrayUnion([currentUserId])
+            ], forDocument: senderRef)
+            
+            // Commit the batch
+            batch.commit { error in
+                if let error = error {
+                    print("Error handling connection request: \(error.localizedDescription)")
+                }
             }
         }
     }
@@ -70,21 +90,22 @@ class ConnectionManager: ObservableObject {
             return
         }
         
-        // Check if already connected
+        // First check if they're already friends
         db.collection("users").document(currentUserId).getDocument { snapshot, error in
-            if let connections = snapshot?.data()?["connections"] as? [String],
-               connections.contains(userId) {
+            if let data = snapshot?.data(),
+               let friends = data["friends"] as? [String],
+               friends.contains(userId) {
                 completion(.connected)
                 return
             }
             
-            // Check if there's a pending request
+            // If not friends, check for pending requests
             self.db.collection("connectionRequests")
-                .whereField("fromUserId", isEqualTo: currentUserId)
-                .whereField("toUserId", isEqualTo: userId)
+                .whereField("senderId", isEqualTo: currentUserId)
+                .whereField("receiverId", isEqualTo: userId)
                 .whereField("status", isEqualTo: "pending")
                 .getDocuments { snapshot, error in
-                    if snapshot?.documents.isEmpty == false {
+                    if let documents = snapshot?.documents, !documents.isEmpty {
                         completion(.pending)
                     } else {
                         completion(.none)
@@ -93,32 +114,30 @@ class ConnectionManager: ObservableObject {
         }
     }
     
-    func fetchPendingRequests() {
+    func fetchAllRequests() {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
+        // Fetch received requests
         db.collection("connectionRequests")
-            .whereField("toUserId", isEqualTo: currentUserId)
+            .whereField("receiverId", isEqualTo: currentUserId)
             .whereField("status", isEqualTo: "pending")
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let documents = snapshot?.documents else { return }
-                
-                self?.pendingRequests = documents.compactMap { document -> ConnectionRequest? in
-                    let data = document.data()
-                    guard let fromUserId = data["fromUserId"] as? String,
-                          let timestamp = data["timestamp"] as? Timestamp else { return nil }
-                    
-                    return ConnectionRequest(
-                        id: document.documentID,
-                        fromUserId: fromUserId,
-                        timestamp: timestamp.dateValue()
-                    )
+                self?.receivedRequests = documents.map { 
+                    ConnectionRequest(id: $0.documentID, data: $0.data())
+                }
+            }
+        
+        // Fetch sent requests
+        db.collection("connectionRequests")
+            .whereField("senderId", isEqualTo: currentUserId)
+            .whereField("status", isEqualTo: "pending")
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let documents = snapshot?.documents else { return }
+                self?.sentRequests = documents.map { 
+                    ConnectionRequest(id: $0.documentID, data: $0.data())
                 }
             }
     }
 }
 
-struct ConnectionRequest: Identifiable {
-    let id: String
-    let fromUserId: String
-    let timestamp: Date
-} 
