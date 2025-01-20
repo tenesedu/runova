@@ -18,6 +18,28 @@ struct ChatView: View {
                 onCreateDirectChat: viewModel.createOrOpenDirectChat,
                 onRefresh: viewModel.fetchConversations
             )
+            .background(
+                NavigationLink(
+                    destination: Group {
+                        if let conversation = viewModel.selectedConversation {
+                            ChatDetailView(conversation: conversation, allowsDismiss: true)
+                        }
+                    },
+                    isActive: $viewModel.showChatDetail,
+                    label: { EmptyView() }
+                )
+            )
+        }
+        .sheet(isPresented: $showingFriendsList) {
+            FriendsListView { friend in
+                viewModel.createOrOpenDirectChat(with: friend) { conversation in
+                    if let conversation = conversation {
+                        showingFriendsList = false
+                        viewModel.selectedConversation = conversation
+                        viewModel.showChatDetail = true
+                    }
+                }
+            }
         }
     }
 }
@@ -57,7 +79,7 @@ struct ChatContentView: View {
     @Binding var showingNewGroupSheet: Bool
     @Binding var showingFriendsList: Bool
     @Binding var showingActionSheet: Bool
-    let onCreateDirectChat: (Runner) -> Void
+    let onCreateDirectChat: (Runner, @escaping (Conversation?) -> Void) -> Void
     let onRefresh: () -> Void
     
     var body: some View {
@@ -82,12 +104,6 @@ struct ChatContentView: View {
         .sheet(isPresented: $showingNewGroupSheet) {
             CreateGroupView { name, participants in
                 onRefresh()
-            }
-        }
-        .sheet(isPresented: $showingFriendsList) {
-            FriendsListView { friend in
-                onCreateDirectChat(friend)
-                showingFriendsList = false
             }
         }
         .onAppear {

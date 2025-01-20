@@ -14,6 +14,7 @@ struct RunnerDetailView: View {
     @State private var showingChat = false
     @State private var selectedConversation: Conversation?
     @State private var isNavigatingToChat = false
+    @StateObject private var chatViewModel = ChatViewModel()
     
     var body: some View {
         ScrollView {
@@ -124,12 +125,11 @@ struct RunnerDetailView: View {
         .background(
             NavigationLink(
                 destination: Group {
-                     if let conversation = selectedConversation {
-                         ChatDetailView(conversation: conversation, allowsDismiss: true)
-                             .navigationBarBackButtonHidden(false)
+                    if let conversation = chatViewModel.selectedConversation {
+                        ChatDetailView(conversation: conversation, allowsDismiss: true)
                     }
                 },
-                isActive: $isNavigatingToChat,
+                isActive: $chatViewModel.showChatDetail,
                 label: { EmptyView() }
             )
         )
@@ -280,124 +280,10 @@ struct RunnerDetailView: View {
     }
     
     private func startChat() {
-        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
-        
-        let db = Firestore.firestore()
-        let runnerId = runner.id
-        
-        // Check if conversation already exists
-        db.collection("conversations")
-            .whereField("type", isEqualTo: "direct")
-            .whereField("participants", arrayContains: currentUserId)
-            .getDocuments(source: .default) { [runner = self.runner] snapshot, error in
-                if let error = error {
-                    print("Error fetching conversations: \(error.localizedDescription)")
-                    return
-                }
-                
-                if let documents = snapshot?.documents {
-                    // Look for existing direct conversation with this runner
-                    let existingConversation = documents.first { document in
-                        let data = document.data()
-                        let participants = data["participants"] as? [String] ?? []
-                        return participants.count == 2 &&
-                               participants.contains(runnerId)
-                    }
-                    
-                    if let existing = existingConversation {
-                        // Use existing conversation
-                        let data = existing.data()
-                        DispatchQueue.main.async {
-                            var conversation = Conversation(
-                                id: existing.documentID,
-                                type: "direct",
-                                participants: data["participants"] as? [String] ?? [],
-                                createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                                createdBy: data["createdBy"] as? String ?? "",
-                                lastMessage: data["lastMessage"] as? String ?? "",
-                                lastMessageTime: (data["lastMessageTime"] as? Timestamp)?.dateValue() ?? Date(),
-                                lastMessageSenderId: data["lastMessageSenderId"] as? String ?? "",
-                                unreadCount: data["unreadCount"] as? [String: Int] ?? [:],
-                                groupName: nil,
-                                groupImageUrl: nil,
-                                groupDescription: nil,
-                                adminId: nil,
-                                otherUserId: runner.id,
-                                deletedFor: data["deletedFor"] as? [String: Bool] ?? [:],
-                                deletedAt: (data["deletedAt"] as? [String: Timestamp] ?? [:]).mapValues { $0.dateValue() }
-                            )
-                            conversation.otherUserProfile = runner
-                            self.selectedConversation = conversation
-                            self.isNavigatingToChat = true
-                        }
-                    } else {
-                        createNewConversation(currentUserId: currentUserId)
-                    }
-                }
-            }
-    }
-    
-    private func createNewConversation(currentUserId: String) {
-        let db = Firestore.firestore()
-        let newConversationRef = db.collection("conversations").document()
-        let participants = [currentUserId, runner.id]
-        let runnerCopy = runner // Capture runner locally
-        
-        let conversationData: [String: Any] = [
-            "type": "direct",
-            "participants": participants,
-            "createdAt": FieldValue.serverTimestamp(),
-            "createdBy": currentUserId,
-            "lastMessage": "",
-            "lastMessageTime": FieldValue.serverTimestamp(),
-            "unreadCount": participants.reduce(into: [String: Int]()) { dict, id in
-                dict[id] = 0
-            }
-        ]
-        
-        // Create batch
-        let batch = db.batch()
-        
-        // Set the conversation data
-        batch.setData(conversationData, forDocument: newConversationRef)
-        
-        // Update both users' conversation arrays
-        for userId in participants {
-            let userRef = db.collection("users").document(userId)
-            batch.updateData([
-                "conversations": FieldValue.arrayUnion([newConversationRef.documentID])
-            ], forDocument: userRef)
-        }
-        
-        // Commit the batch once
-        batch.commit { error in
-            if let error = error {
-                print("Error creating conversation: \(error.localizedDescription)")
-                return
-            }
-            
-            DispatchQueue.main.async {
-                var conversation = Conversation(
-                    id: newConversationRef.documentID,
-                    type: "direct",
-                    participants: participants,
-                    createdAt: Date(),
-                    createdBy: currentUserId,
-                    lastMessage: "",
-                    lastMessageTime: Date(),
-                    lastMessageSenderId: currentUserId,
-                    unreadCount: participants.reduce(into: [String: Int]()) { dict, id in
-                        dict[id] = 0
-                    },
-                    groupName: nil,
-                    groupImageUrl: nil,
-                    groupDescription: nil,
-                    adminId: nil,
-                    otherUserId: runnerCopy.id
-                )
-                conversation.otherUserProfile = runnerCopy
-                self.selectedConversation = conversation
-                self.isNavigatingToChat = true
+        chatViewModel.createOrOpenDirectChat(with: runner) { conversation in
+            if let conversation = conversation {
+                chatViewModel.selectedConversation = conversation
+                chatViewModel.showChatDetail = true
             }
         }
     }
