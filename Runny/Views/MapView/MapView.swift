@@ -63,143 +63,151 @@ struct MapView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .top) {
-            Map(position: $position) {
-                if let location = locationManager.location,
-                   let currentUserId = Auth.auth().currentUser?.uid,
-                   let currentUser = users.first(where: { $0.id == currentUserId }) {
-                    Annotation("", coordinate: location.coordinate) {
-                        UserMapMarker(user: currentUser) {
-                            selectedUser = currentUser
-                            showingUserProfile = true
+        NavigationView {
+            ZStack(alignment: .top) {
+                Map(position: $position) {
+                    if let location = locationManager.location,
+                       let currentUserId = Auth.auth().currentUser?.uid,
+                       let currentUser = users.first(where: { $0.id == currentUserId }) {
+                        Annotation("", coordinate: location.coordinate) {
+                            UserMapMarker(user: currentUser) {
+                                selectedUser = currentUser
+                                showingUserProfile = true
+                            }
                         }
                     }
-                }
-                
-                ForEach(runnersInRange) { user in
-                    if let userLocation = user.locationAsCLLocation(),
-                       user.id != Auth.auth().currentUser?.uid {
-                        Annotation("", coordinate: userLocation.coordinate) {
-                            UserMapMarker(user: user) {
-                                selectedUser = user
-                                if let selectedUser = selectedUser {
-                                    let runner = Runner(user: selectedUser)
-                                    NavigationLink(destination: RunnerDetailView(runner: runner)) {
-                                        EmptyView()
-                                    }
+                    
+                    ForEach(runnersInRange) { user in
+                        if let userLocation = user.locationAsCLLocation(),
+                           user.id != Auth.auth().currentUser?.uid {
+                            Annotation("", coordinate: userLocation.coordinate) {
+                                UserMapMarker(user: user) {
+                                    selectedUser = user
+                                    showingUserProfile = true
                                 }
                             }
                         }
                     }
-                }
-                
-                if let selectedResult = selectedResult {
-                    Annotation("Selected Location", coordinate: selectedResult.placemark.coordinate) {
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.title)
-                            .foregroundColor(.red)
-                    }
-                }
-                
-                if let location = locationManager.location {
-                    Annotation("", coordinate: location.coordinate) {
-                        ZStack {
-                            Circle()
-                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
-                                .frame(width: 100)
-                            
-                            Circle()
-                                .stroke(Color.blue.opacity(0.2), lineWidth: 1.5)
-                                .frame(width: 100 * radarAnimationAmount)
-                                .animation(
-                                    Animation.easeInOut(duration: 2)
-                                        .repeatForever(autoreverses: false),
-                                    value: radarAnimationAmount
-                                )
+                    
+                    if let selectedResult = selectedResult {
+                        Annotation("Selected Location", coordinate: selectedResult.placemark.coordinate) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.title)
+                                .foregroundColor(.red)
                         }
                     }
-                }
-            }
-            .mapStyle(.standard(showsTraffic: false))
-            .mapControls {
-                MapCompass()
-                MapScaleView()
-            }
-            .ignoresSafeArea()
-            
-            VStack {
-                Button(action: {
+                    
                     if let location = locationManager.location {
-                        withAnimation {
-                            position = .region(MKCoordinateRegion(
-                                center: location.coordinate,
-                                span: MKCoordinateSpan(
-                                    latitudeDelta: 0.005,
-                                    longitudeDelta: 0.005
-                                )
-                            ))
+                        Annotation("", coordinate: location.coordinate) {
+                            ZStack {
+                                Circle()
+                                    .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                    .frame(width: 100)
+                                
+                                Circle()
+                                    .stroke(Color.blue.opacity(0.2), lineWidth: 1.5)
+                                    .frame(width: 100 * radarAnimationAmount)
+                                    .animation(
+                                        Animation.easeInOut(duration: 2)
+                                            .repeatForever(autoreverses: false),
+                                        value: radarAnimationAmount
+                                    )
+                            }
                         }
-                    } else {
-                        locationManager.requestLocation()
                     }
-                }) {
-                    Image(systemName: "location.fill")
-                        .font(.title2)
-                        .foregroundColor(.blue)
-                        .frame(width: 44, height: 44)
-                        .background(Color.white)
-                        .clipShape(Circle())
-                        .shadow(radius: 2)
                 }
-                .padding(.top, UIApplication.shared.windows.first?.safeAreaInsets.top ?? 44)
-                .padding(.trailing, 16)
+                .mapStyle(.standard(showsTraffic: false))
+                .mapControls {
+                    MapCompass()
+                    MapScaleView()
+                }
+                .ignoresSafeArea()
                 
-                Spacer()
-            }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            
-            VStack {
-                RangeSelector(selectedRange: $selectedRange, availableRanges: availableRanges)
+                VStack {
+                    Button(action: {
+                        if let location = locationManager.location {
+                            withAnimation {
+                                position = .region(MKCoordinateRegion(
+                                    center: location.coordinate,
+                                    span: MKCoordinateSpan(
+                                        latitudeDelta: 0.005,
+                                        longitudeDelta: 0.005
+                                    )
+                                ))
+                            }
+                        } else {
+                            locationManager.requestLocation()
+                        }
+                    }) {
+                        Image(systemName: "location.fill")
+                            .font(.title2)
+                            .foregroundColor(.blue)
+                            .frame(width: 44, height: 44)
+                            .background(Color.white)
+                            .clipShape(Circle())
+                            .shadow(radius: 2)
+                    }
                     .padding(.top, UIApplication.shared.windows.first?.safeAreaInsets.top ?? 44)
-                    .padding(.horizontal)
+                    .padding(.trailing, 16)
+                    
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
                 
-                Spacer()
-            }
-            
-            VStack {
-                Spacer()
-                RunnersPanel(
-                    runnersInRange: runnersInRange,
-                    locationManager: locationManager,
-                    onUserSelected: { user in
-                        selectedUser = user
-                        showingUserProfile = true
-                    },
-                    selectedRange: selectedRange
-                )
-            }
-        }
-        .edgesIgnoringSafeArea(.all)
-        .onAppear {
-            locationManager.requestLocation()
-            if users.isEmpty {
-                startListeningToUsers()
-            }
-            
-            withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
-                radarAnimationAmount = 2.0
-            }
-        }
-        .alert("Location Access Required", 
-               isPresented: .constant(!locationManager.isLocationEnabled && locationManager.authorizationStatus != .notDetermined)) {
-            Button("Open Settings") {
-                if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(settingsURL)
+                VStack {
+                    RangeSelector(selectedRange: $selectedRange, availableRanges: availableRanges)
+                        .padding(.top, UIApplication.shared.windows.first?.safeAreaInsets.top ?? 44)
+                        .padding(.horizontal)
+                    
+                    Spacer()
+                }
+                
+                VStack {
+                    Spacer()
+                    RunnersPanel(
+                        runnersInRange: runnersInRange,
+                        locationManager: locationManager,
+                        onUserSelected: { user in
+                            selectedUser = user
+                            showingUserProfile = true
+                        },
+                        selectedRange: selectedRange
+                    )
                 }
             }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Please enable location access in Settings to see nearby runners.")
+            .edgesIgnoringSafeArea(.all)
+            .onAppear {
+                locationManager.requestLocation()
+                if users.isEmpty {
+                    startListeningToUsers()
+                }
+                
+                withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
+                    radarAnimationAmount = 2.0
+                }
+            }
+            .alert("Location Access Required", 
+                   isPresented: .constant(!locationManager.isLocationEnabled && locationManager.authorizationStatus != .notDetermined)) {
+                Button("Open Settings") {
+                    if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(settingsURL)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Please enable location access in Settings to see nearby runners.")
+            }
+            .background(
+                NavigationLink(
+                    destination: Group {
+                        if let selectedUser = selectedUser {
+                            RunnerDetailView(runner: Runner(user: selectedUser))
+                        }
+                    },
+                    isActive: $showingUserProfile,
+                    label: { EmptyView() }
+                )
+            )
         }
     }
     
@@ -318,59 +326,55 @@ struct MapView: View {
         let user: UserApp
         let action: () -> Void
         @State private var profileImage: UIImage?
-        @State private var navigateToProfile = false
         
         var isCurrentUser: Bool {
             user.id == Auth.auth().currentUser?.uid
         }
         
         var body: some View {
-            NavigationLink(destination: RunnerDetailView(runner: Runner(user: user)), isActive: $navigateToProfile) {
-                EmptyView()
-            }
-            
-            VStack(spacing: 4) {
-                Group {
-                    if let profileImage = profileImage {
-                        Image(uiImage: profileImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } else {
-                        Circle()
-                            .fill(Color.gray.opacity(0.3))
-                            .overlay(
-                                Image(systemName: "person.fill")
-                                    .foregroundColor(.white)
-                            )
-                    }
+            Button(action: {
+                if !isCurrentUser {
+                    action()
                 }
-                .frame(width: 40, height: 40)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(isCurrentUser ? Color.blue : Color.white, lineWidth: 3)
-                )
-                .shadow(radius: 3)
-                
-                Text(isCurrentUser ? "You" : user.name)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule()
-                            .fill(Color.white)
-                            .shadow(radius: 1)
+            }) {
+                VStack(spacing: 4) {
+                    Group {
+                        if let profileImage = profileImage {
+                            Image(uiImage: profileImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } else {
+                            Circle()
+                                .fill(Color.gray.opacity(0.3))
+                                .overlay(
+                                    Image(systemName: "person.fill")
+                                        .foregroundColor(.white)
+                                )
+                        }
+                    }
+                    .frame(width: 40, height: 40)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(isCurrentUser ? Color.blue : Color.white, lineWidth: 3)
                     )
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                navigateToProfile = true
+                    .shadow(radius: 3)
+                    
+                    Text(isCurrentUser ? "You" : user.name)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Color.white)
+                                .shadow(radius: 1)
+                        )
+                }
             }
             .onAppear {
                 loadProfileImage()
-                
             }
         }
         
@@ -494,7 +498,7 @@ struct MapView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 16) {
                             ForEach(runnersInRange) { user in
-                                NearbyRunnerCard(user: user, isExpanded: isExpanded, locationManager: locationManager, action: {
+                                NearbyRunnerCard(user: user, locationManager: locationManager, action: {
                                     onUserSelected(user)
                                 })
                             }
@@ -514,7 +518,6 @@ struct MapView: View {
     
     struct NearbyRunnerCard: View {
         let user: UserApp
-        let isExpanded: Bool
         let locationManager: LocationManager
         let action: () -> Void
         @State private var profileImage: UIImage?
@@ -523,8 +526,6 @@ struct MapView: View {
         var body: some View {
             Button(action: action) {
                 VStack(alignment: .leading, spacing: 0) {
-                 
-                    
                     ZStack {
                         Group {
                             if let profileImage = profileImage {
@@ -586,11 +587,9 @@ struct MapView: View {
             .buttonStyle(PlainButtonStyle())
             .onAppear {
                 loadProfileImage()
-             
                 calculateDistance()
-                
             }
-             .onChange(of: locationManager.location) { _ in
+            .onChange(of: locationManager.location) { _ in
                 calculateDistance()
             }
         }
@@ -606,9 +605,9 @@ struct MapView: View {
             }.resume()
         }
         
-       private func calculateDistance() {
+        private func calculateDistance() {
             if let currentLocation = locationManager.location,
-            let userLocation = user.locationAsCLLocation() {
+               let userLocation = user.locationAsCLLocation() {
                 let distanceInMeters = currentLocation.distance(from: userLocation)
                 distance = String(format: "%.1f km", distanceInMeters / 1000)
                 print("Calculated distance: \(distance)")
@@ -616,7 +615,6 @@ struct MapView: View {
                 print("Unable to calculate distance: currentLocation or userLocation is nil")
             }
         }
-
     }
     
     struct RangeSelector: View {

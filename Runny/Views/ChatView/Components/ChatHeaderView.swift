@@ -6,6 +6,7 @@ struct ChatHeaderView: View {
     let participants: [Runner]
     let onBackTap: () -> Void
     let onInfoTap: () -> Void
+    @State private var showingProfile = false
     
     var body: some View {
         HStack(spacing: 12) {
@@ -15,21 +16,32 @@ struct ChatHeaderView: View {
                     .foregroundColor(.primary)
             }
             
-            if conversation.type == "direct" {
-                UserProfileImage(url: conversation.otherUserProfile?.profileImageUrl)
-            } else {
-                GroupProfileImage(url: conversation.groupImageUrl)
-            }
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(headerTitle)
-                    .font(.headline)
-                
-                if conversation.type == "group" {
-                    Text(participantsText)
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                        .lineLimit(1)
+            Button(action: {
+                if conversation.type == "direct" {
+                    showingProfile = true
+                } else {
+                    onInfoTap()
+                }
+            }) {
+                HStack {
+                    if conversation.type == "direct" {
+                        UserProfileImage(url: conversation.otherUserProfile?.profileImageUrl)
+                    } else {
+                        GroupProfileImage(url: conversation.groupImageUrl)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(headerTitle)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        if conversation.type == "group" {
+                            Text(participantsText)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .lineLimit(1)
+                        }
+                    }
                 }
             }
             
@@ -43,6 +55,18 @@ struct ChatHeaderView: View {
                 }
             }
         }
+        .background(
+            NavigationLink(
+                destination: Group {
+                    if conversation.type == "direct",
+                       let otherUser = conversation.otherUserProfile {
+                        RunnerDetailView(runner: otherUser)
+                    }
+                },
+                isActive: $showingProfile,
+                label: { EmptyView() }
+            )
+        )
     }
     
     private var headerTitle: String {
