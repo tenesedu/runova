@@ -69,8 +69,11 @@ class ChatViewModel: ObservableObject {
                         groupImageUrl: data["imageUrl"] as? String,
                         groupDescription: data["description"] as? String,
                         adminId: data["adminId"] as? String,
-                        otherUserId: type == "direct" ? participants.first { $0 != currentUserId } : nil
+                        otherUserId: type == "direct" ? participants.first { $0 != currentUserId } : nil,
+                        otherUserProfile: nil
                     )
+                    
+                   
                     
                     print("Created conversation object: type=\(type), groupName=\(conversation.groupName ?? "nil")")
                     
@@ -79,7 +82,7 @@ class ChatViewModel: ObservableObject {
                             self?.db.collection("users").document(otherUserId).getDocument { snapshot, error in
                                 if let userData = snapshot?.data() {
                                     let user = UserApp(id: snapshot?.documentID ?? "", data: userData)
-                                    conversation.otherUserProfile = Runner(user: user)
+                                    conversation.otherUserProfile = UserProfile(user: user)
                                 }
                                 newConversations.append(conversation)
                                 group.leave()
@@ -156,10 +159,11 @@ class ChatViewModel: ObservableObject {
                             groupDescription: nil,
                             adminId: nil,
                             otherUserId: friend.id,
+                            otherUserProfile: UserProfile(runner: friend),
                             deletedFor: data["deletedFor"] as? [String: Bool] ?? [:],
                             deletedAt: (data["deletedAt"] as? [String: Timestamp] ?? [:]).mapValues { $0.dateValue() }
                         )
-                        conversation.otherUserProfile = friend
+                      
                         completion(conversation)
                     } else {
                         // Create new conversation
@@ -225,9 +229,10 @@ class ChatViewModel: ObservableObject {
                 groupImageUrl: nil,
                 groupDescription: nil,
                 adminId: nil,
-                otherUserId: friend.id
+                otherUserId: friend.id,
+                otherUserProfile: UserProfile(runner: friend)
             )
-            conversation.otherUserProfile = friend
+            
             completion(conversation)
         }
     }

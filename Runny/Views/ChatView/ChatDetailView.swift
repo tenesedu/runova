@@ -185,78 +185,9 @@ struct ChatDetailView: View {
     }
 }
 
-struct MessagesView: View {
-    let messages: [Message]
-    let isGroupChat: Bool
-    
-    var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    ForEach(messages) { message in
-                        MessageBubble(
-                            message: message,
-                            isFromCurrentUser: message.senderId == Auth.auth().currentUser?.uid,
-                            showSenderName: isGroupChat
-                        )
-                        .id(message.id)
-                    }
-                }
-                .padding()
-            }
-            .onChange(of: messages.count) { [oldCount = messages.count] newCount in
-                if newCount > oldCount {
-                    withAnimation {
-                        if let lastId = messages.last?.id {
-                            proxy.scrollTo(lastId, anchor: .bottom)
-                        }
-                    }
-                }
-            }
-            .onAppear {
-                if let lastId = messages.last?.id {
-                    proxy.scrollTo(lastId, anchor: .bottom)
-                }
-            }
-        }
-    }
-}
 
-struct MessageBubble: View {
-    let message: Message
-    let isFromCurrentUser: Bool
-    let showSenderName: Bool // Add this to conditionally show the sender's name
-    
-    var body: some View {
-        VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 4) {
-            // Show sender's name if it's a group chat and the message is from another user
-            if showSenderName && !isFromCurrentUser {
-                Text(message.senderName)
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .padding(.leading, 8) // Adjust padding to align with the message bubble
-            }
-            
-            HStack {
-                if isFromCurrentUser { Spacer() }
-                
-                VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 4) {
-                    Text(message.content)
-                        .padding(12)
-                        .background(isFromCurrentUser ? Color.blue : Color(.systemGray6))
-                        .foregroundColor(isFromCurrentUser ? .white : .primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                    
-                    Text(message.timestamp, style: .time)
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                }
-                
-                if !isFromCurrentUser { Spacer() }
-            }
-        }
-    }
-}
+
+
 
 // Update GroupInfoView to accept participants
 struct GroupInfoView: View {
@@ -318,5 +249,36 @@ struct GroupInfoView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Preview
+struct ChatDetailView_Previews: PreviewProvider {
+    static var previews: some View {
+        let mockConversation = Conversation(
+            id: "123",
+            type: "direct",
+            participants: ["user1", "user2"],
+            createdAt: Date(),
+            createdBy: "user1",
+            lastMessage: "Hello!",
+            lastMessageTime: Date(),
+            lastMessageSenderId: "user1",
+            unreadCount: ["user1": 0, "user2": 1],
+            groupName: nil,
+            groupImageUrl: nil,
+            groupDescription: nil,
+            adminId: nil,
+            otherUserId: "user2",
+            otherUserProfile: UserProfile(
+                id: "user2",
+                name: "John Doe",
+                profileImageUrl: "https://example.com/profile.jpg"
+            ),
+            deletedFor: [:],
+            deletedAt: [:]
+        )
+        
+        ChatDetailView(conversation: mockConversation, allowsDismiss: true)
     }
 }

@@ -19,7 +19,7 @@ struct Conversation: Identifiable {
     
     // Direct-specific fields
     var otherUserId: String?
-    var otherUserProfile: Runner?
+    var otherUserProfile: UserProfile?
     
     let deletedFor: [String: Bool]
     let deletedAt: [String: Date]
@@ -27,7 +27,7 @@ struct Conversation: Identifiable {
     init(id: String, type: String, participants: [String], createdAt: Date, createdBy: String,
          lastMessage: String, lastMessageTime: Date, lastMessageSenderId: String?, unreadCount: [String: Int],
          groupName: String?, groupImageUrl: String?, groupDescription: String?, adminId: String?,
-         otherUserId: String?, deletedFor: [String: Bool] = [:], deletedAt: [String: Date] = [:]) {
+         otherUserId: String?, otherUserProfile: UserProfile? ,deletedFor: [String: Bool] = [:], deletedAt: [String: Date] = [:]) {
         self.id = id
         self.type = type
         self.participants = participants
@@ -42,6 +42,7 @@ struct Conversation: Identifiable {
         self.groupDescription = groupDescription
         self.adminId = adminId
         self.otherUserId = otherUserId
+        self.otherUserProfile = otherUserProfile
         self.deletedFor = deletedFor
         self.deletedAt = deletedAt
     }

@@ -60,7 +60,12 @@ struct ChatHeaderView: View {
                 destination: Group {
                     if conversation.type == "direct",
                        let otherUser = conversation.otherUserProfile {
-                        RunnerDetailView(runner: otherUser)
+                        if let runner = participants.first(where: {$0.id == otherUser.id}){
+                            RunnerDetailView(runner: runner)
+                        }else{
+                            Text("User not found")
+                        }
+                       
                     }
                 },
                 isActive: $showingProfile,

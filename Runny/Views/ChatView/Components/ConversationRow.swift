@@ -164,44 +164,67 @@ struct GroupProfileImage: View {
 } 
 
 
-// struct ConversationRow_Previews: PreviewProvider {
-//     static var previews: some View {
-//         Group {
-//             // Preview for direct message
-//             ConversationRow(conversation: mockDirectConversation)
-//                 .previewLayout(.sizeThatFits)
-//                 .padding()
-//                 .previewDisplayName("Direct Message")
+struct ConversationRow_Previews: PreviewProvider {
+    static var previews: some View {
+        Group {
+            // Preview for direct message
+            ConversationRow(conversation: mockDirectConversation)
+                .previewLayout(.sizeThatFits)
+                .padding()
+                .previewDisplayName("Direct Message")
             
-//             // Preview for group message
-//             ConversationRow(conversation: mockGroupConversation)
-//                 .previewLayout(.sizeThatFits)
-//                 .padding()
-//                 .previewDisplayName("Group Message")
-//         }
-//     }
-// }
+            // Preview for group message
+            ConversationRow(conversation: mockGroupConversation)
+                .previewLayout(.sizeThatFits)
+                .padding()
+                .previewDisplayName("Group Message")
+        }
+    }
+}
 
-// let mockDirectConversation = Conversation(
-//     type: "direct",
-//     otherUserProfile: UserProfile(name: "John Doe", profileImageUrl: "https://example.com/profile.jpg"),
-//     groupImageUrl: nil,
-//     groupName: nil,
-//     lastMessage: "Hey, how are you?",
-//     lastMessageSenderId: "123",
-//     lastMessageTime: Date(),
-//     unreadCount: ["456": 2], // Assuming current user ID is "456"
-//     participants: ["123", "456"]
-// )
 
-// let mockGroupConversation = Conversation(
-//     type: "group",
-//     otherUserProfile: nil,
-//     groupImageUrl: "https://example.com/group.jpg",
-//     groupName: "Running Club",
-//     lastMessage: "Let's meet at 7 AM!",
-//     lastMessageSenderId: "789",
-//     lastMessageTime: Date(),
-//     unreadCount: ["456": 1], 
-//     participants: ["123", "456", "789"]
-// )
+// Mock data for direct message
+let mockDirectConversation = Conversation(
+    id: "123455",
+    type: "direct",
+    participants: ["123", "456"],
+    createdAt: Date(),
+    createdBy: "123",
+    lastMessage: "Hey, how are you?",
+    lastMessageTime: Date(),
+    lastMessageSenderId: "123",
+    unreadCount: ["456": 2],
+    groupName: nil,
+    groupImageUrl: nil,
+    groupDescription: nil,
+    adminId: nil,
+    otherUserId: "123",
+    otherUserProfile: UserProfile(
+        id: "123",
+        name: "Eduardo",
+        profileImageUrl: "https://example.com/group.jpg"
+    ),
+    deletedFor: [:],
+    deletedAt: [:]
+)
+
+// Mock data for group message
+let mockGroupConversation = Conversation(
+    id: "678910",
+    type: "group",
+    participants: ["123", "456", "789"],
+    createdAt: Date(),
+    createdBy: "123",
+    lastMessage: "Let's meet at 7 AM!",
+    lastMessageTime: Date(),
+    lastMessageSenderId: "789",
+    unreadCount: ["456": 1],
+    groupName: "Running Club",
+    groupImageUrl: "https://example.com/group.jpg",
+    groupDescription: "A group for running enthusiasts",
+    adminId: "123",
+    otherUserId: nil,
+    otherUserProfile: nil,
+    deletedFor: [:],
+    deletedAt: [:]
+)
