@@ -66,7 +66,7 @@ struct RunnersPanel: View {
             Rectangle()
                 .fill(.ultraThinMaterial)
         )
-        .frame(height: runnersInRange.isEmpty ? 160 : (isExpanded ? 380 : 180))
+        .frame(height: runnersInRange.isEmpty ? 70 : (isExpanded ? 200 : 70))
     }
 }
 
