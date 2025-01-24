@@ -204,69 +204,24 @@ struct RunnerDetailView: View {
         }
     }
     
-    private func handleConnectionAction() {
-        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
-        
-        let db = Firestore.firestore()
-        
+     private func handleConnectionAction() {
         switch connectionStatus {
         case .none:
             // Show immediate feedback
             connectionStatus = .pending
-            
-            let requestData: [String: Any] = [
-                "senderId": currentUserId,
-                "receiverId": runner.id,
-                "status": "pending",
-                "createdAt": FieldValue.serverTimestamp(),
-                "updatedAt": FieldValue.serverTimestamp()
-            ]
-            
-            db.collection("connectionRequests").addDocument(data: requestData) { error in
-                if let error = error {
-                    print("Error sending connection request: \(error.localizedDescription)")
-                    // Revert status if error
-                    connectionStatus = .none
-                }
-            }
+            connectionManager.sendConnectionRequest(to: runner.id)
             
         case .pending:
-            // Cancel request
-            db.collection("connectionRequests")
-                .whereField("senderId", isEqualTo: currentUserId)
-                .whereField("receiverId", isEqualTo: runner.id)
-                .whereField("status", isEqualTo: "pending")
-                .getDocuments { snapshot, error in
-                    if let document = snapshot?.documents.first {
-                        document.reference.updateData([
-                            "status": "cancelled",
-                            "updatedAt": FieldValue.serverTimestamp()
-                        ])
-                    }
-                }
+            connectionManager.cancelRequest(to: runner.id)
+            connectionStatus = .none
             
         case .connected:
-            // Remove connection
-            let batch = db.batch()
-            
-            let currentUserRef = db.collection("users").document(currentUserId)
-            let otherUserRef = db.collection("users").document(runner.id)
-            
-            batch.updateData([
-                "friends": FieldValue.arrayRemove([runner.id])
-            ], forDocument: currentUserRef)
-            
-            batch.updateData([
-                "friends": FieldValue.arrayRemove([currentUserId])
-            ], forDocument: otherUserRef)
-            
-            batch.commit { error in
-                if let error = error {
-                    print("Error removing connection: \(error.localizedDescription)")
-                }
-            }
+            connectionManager.removeConnection(with: runner.id)
+            connectionStatus = .none
         }
     }
+
+      
     
     private var connectionButtonIcon: String {
         switch connectionStatus {

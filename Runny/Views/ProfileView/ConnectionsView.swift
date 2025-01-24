@@ -4,9 +4,13 @@ import FirebaseAuth
 
 
 struct ConnectionsView: View {
-    @State private var selectedTab = 0
+    @State private var selectedTab: Int
     @State private var friends: [Runner] = []
     @StateObject private var connectionManager = ConnectionManager()
+    
+    init(selectedTab: Int = 0){
+        _selectedTab = State(initialValue: selectedTab)
+    }
     
     var body: some View {
         VStack(spacing: 0) {

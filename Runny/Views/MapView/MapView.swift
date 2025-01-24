@@ -63,102 +63,102 @@ struct MapView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .top) {
-            Map(position: $position) {
-                if let location = locationManager.location,
-                   let currentUserId = Auth.auth().currentUser?.uid,
-                   let currentUser = users.first(where: { $0.id == currentUserId }) {
-                    Annotation("", coordinate: location.coordinate) {
-                        UserMapMarker(user: currentUser) {
-                            selectedUser = currentUser
-                            showingUserProfile = true
-                        }
-                    }
-                }
-                
-                ForEach(runnersInRange) { user in
-                    if let userLocation = user.locationAsCLLocation(),
-                       user.id != Auth.auth().currentUser?.uid {
-                        Annotation("", coordinate: userLocation.coordinate) {
-                            UserMapMarker(user: user) {
-                                selectedUser = user
+        NavigationView {
+            ZStack(alignment: .top) {
+                Map(position: $position) {
+                    if let location = locationManager.location,
+                       let currentUserId = Auth.auth().currentUser?.uid,
+                       let currentUser = users.first(where: { $0.id == currentUserId }) {
+                        Annotation("", coordinate: location.coordinate) {
+                            UserMapMarker(user: currentUser) {
+                                selectedUser = currentUser
                                 showingUserProfile = true
                             }
                         }
                     }
-                }
-                
-                if let selectedResult = selectedResult {
-                    Annotation("Selected Location", coordinate: selectedResult.placemark.coordinate) {
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.title)
-                            .foregroundColor(.red)
+                    
+                    ForEach(runnersInRange) { user in
+                        if let userLocation = user.locationAsCLLocation(),
+                           user.id != Auth.auth().currentUser?.uid {
+                            Annotation("", coordinate: userLocation.coordinate) {
+                                UserMapMarker(user: user) {
+                                    selectedUser = user
+                                    showingUserProfile = true
+                                }
+                            }
+                        }
                     }
+                    
+                    if let selectedResult = selectedResult {
+                        Annotation("Selected Location", coordinate: selectedResult.placemark.coordinate) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.title)
+                                .foregroundColor(.red)
+                        }
+                    }
+                    
                 }
+                .mapStyle(.standard(showsTraffic: false))
+                .mapControls {
+                    MapCompass()
+                    MapScaleView()
+                }
+                .ignoresSafeArea()
                 
-               
-            }
-            .mapStyle(.standard(showsTraffic: false))
-            .mapControls {
-                MapCompass()
-                MapScaleView()
-            }
-            .ignoresSafeArea()
-            
-            // Top controls overlay
-            VStack(spacing: 0) {
-                // Top controls container
-                HStack(spacing: 0) {
-                    // Range Selector
-                    RangeSelector(selectedRange: $selectedRange, availableRanges: availableRanges)
-                        .padding(.horizontal)
+                // Top controls overlay
+                VStack(spacing: 0) {
+                    // Top controls container
+                    HStack(spacing: 0) {
+                        // Range Selector
+                        RangeSelector(selectedRange: $selectedRange, availableRanges: availableRanges)
+                            .padding(.horizontal)
+                        
+                        Spacer()
+                        
+                        // Location Button
+                        Button(action: {
+                            if let location = locationManager.location {
+                                withAnimation {
+                                    position = .region(MKCoordinateRegion(
+                                        center: location.coordinate,
+                                        span: MKCoordinateSpan(
+                                            latitudeDelta: 0.005,
+                                            longitudeDelta: 0.005
+                                        )
+                                    ))
+                                }
+                            } else {
+                                locationManager.requestLocation()
+                            }
+                        }) {
+                            Image(systemName: "location.fill")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                                .frame(width: 44, height: 44)
+                                .background(Color.white)
+                                .clipShape(Circle())
+                                .shadow(radius: 2)
+                        }
+                        .padding(.trailing, 30)
+                    }
+                    .padding(.top, 8)
+                    .padding(.horizontal)
+                    .background(Color.clear)
                     
                     Spacer()
                     
-                    // Location Button
-                    Button(action: {
-                        if let location = locationManager.location {
-                            withAnimation {
-                                position = .region(MKCoordinateRegion(
-                                    center: location.coordinate,
-                                    span: MKCoordinateSpan(
-                                        latitudeDelta: 0.005,
-                                        longitudeDelta: 0.005
-                                    )
-                                ))
-                            }
-                        } else {
-                            locationManager.requestLocation()
-                        }
-                    }) {
-                        Image(systemName: "location.fill")
-                            .font(.title2)
-                            .foregroundColor(.blue)
-                            .frame(width: 44, height: 44)
-                            .background(Color.white)
-                            .clipShape(Circle())
-                            .shadow(radius: 2)
-                    }
-                    .padding(.trailing, 30)
+                    // Runners panel at bottom
+                    RunnersPanel(
+                        runnersInRange: runnersInRange,
+                        locationManager: locationManager,
+                        onUserSelected: { user in
+                            selectedUser = user
+                            showingUserProfile = true
+                        },
+                        selectedRange: selectedRange
+                    )
                 }
-                .padding(.top, 8)
-                .padding(.horizontal)
-                .background(Color.clear)
                 
-                Spacer()
-                
-                // Runners panel at bottom
-                RunnersPanel(
-                    runnersInRange: runnersInRange,
-                    locationManager: locationManager,
-                    onUserSelected: { user in
-                        selectedUser = user
-                        showingUserProfile = true
-                    },
-                    selectedRange: selectedRange
-                )
-            }
-            .background(
                 NavigationLink(
                     destination: Group {
                         if let selectedUser = selectedUser {
@@ -168,8 +168,10 @@ struct MapView: View {
                     isActive: $showingUserProfile,
                     label: { EmptyView() }
                 )
-            )
+            }
+            .navigationBarHidden(true)
         }
+        
         .onAppear {
             locationManager.requestLocation()
             if users.isEmpty {
@@ -191,6 +193,7 @@ struct MapView: View {
         } message: {
             Text("Please enable location access in Settings to see nearby runners.")
         }
+        
     }
     
     private func performSearch() {
@@ -367,8 +370,6 @@ struct MapView: View {
         }
     }
     
-   
-    
     struct RangeSelector: View {
         @Binding var selectedRange: Double
         let availableRanges: [Double]
@@ -402,8 +403,6 @@ struct MapView: View {
         }
     }
 }
-
-
 
 struct MapView_Previews: PreviewProvider {
     static var previews: some View {

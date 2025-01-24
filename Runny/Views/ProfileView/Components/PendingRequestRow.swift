@@ -6,6 +6,7 @@ struct PendingRequestRow: View {
     let request: ConnectionRequest
     @State private var senderProfile: Runner?
     @State private var showingProfile = false
+    @StateObject private var connectionManager = ConnectionManager()
     
     var body: some View {
         HStack(spacing: 12) {
@@ -44,7 +45,7 @@ struct PendingRequestRow: View {
             // Accept/Reject Buttons
             HStack(spacing: 15) {
                 Button(action: {
-                    handleRequest(action: "accepted")
+                    connectionManager.handleConnectionRequest(requestId: request.id ,action: "accepted")
                 }) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
@@ -52,7 +53,7 @@ struct PendingRequestRow: View {
                 }
                 
                 Button(action: {
-                    handleRequest(action: "rejected")
+                    connectionManager.handleConnectionRequest(requestId: request.id, action: "rejected")
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.red)
@@ -85,38 +86,4 @@ struct PendingRequestRow: View {
             }
         }
     }
-    
-    private func handleRequest(action: String) {
-        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
-        
-        let db = Firestore.firestore()
-        let batch = db.batch()
-        
-        // Update request status
-        let requestRef = db.collection("connectionRequests").document(request.id)
-        batch.updateData([
-            "status": action,
-            "updatedAt": FieldValue.serverTimestamp()
-        ], forDocument: requestRef)
-        
-        if action == "accepted" {
-            // Add to both users' friends arrays
-            let currentUserRef = db.collection("users").document(currentUserId)
-            let otherUserRef = db.collection("users").document(request.senderId)
-            
-            batch.updateData([
-                "friends": FieldValue.arrayUnion([request.senderId])
-            ], forDocument: currentUserRef)
-            
-            batch.updateData([
-                "friends": FieldValue.arrayUnion([currentUserId])
-            ], forDocument: otherUserRef)
-        }
-        
-        batch.commit { error in
-            if let error = error {
-                print("Error handling connection request: \(error.localizedDescription)")
-            }
-        }
-    }
-} 
+}

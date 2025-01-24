@@ -4,63 +4,76 @@ import FirebaseFirestore
 import FirebaseAuth
 
 class NotificationManager: ObservableObject {
-    @Published var unreadNotifications = 0
-    @Published var receivedRequests: [ConnectionRequest] = []
-    @Published var acceptedRequests: [ConnectionRequest] = []
+    @Published var notifications: [UserNotification] = []
+    @Published var unreadNotifications: Int = 0
     private let db = Firestore.firestore()
+    private var listener: ListenerRegistration?
     
     func fetchNotifications() {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
-        // Fetch received requests
-        db.collection("connectionRequests")
-            .whereField("receiverId", isEqualTo: currentUserId)
-            .whereField("status", isEqualTo: "pending")
-            .whereField("seen", isEqualTo: false) // Only fetch unseen requests
-            .addSnapshotListener { [weak self] snapshot, error in
-                guard let documents = snapshot?.documents else { return }
-                self?.receivedRequests = documents.map {
-                    ConnectionRequest(id: $0.documentID, data: $0.data())
-                }
-                self?.updateUnreadCount()
-            }
+        // Remove existing listener if any
+        listener?.remove()
         
-        // Fetch accepted requests that haven't been seen
-        db.collection("connectionRequests")
-            .whereField("senderId", isEqualTo: currentUserId)
-            .whereField("status", isEqualTo: "accepted")
-            .whereField("seen", isEqualTo: false)
+        // Set up new listener
+        listener = db.collection("notifications")
+            .whereField("receiverId", isEqualTo: currentUserId)
+            .order(by: "timestamp", descending: true)
             .addSnapshotListener { [weak self] snapshot, error in
-                guard let documents = snapshot?.documents else { return }
-                self?.acceptedRequests = documents.map {
-                    ConnectionRequest(id: $0.documentID, data: $0.data())
+                guard let documents = snapshot?.documents else {
+                    print("Error fetching notifications: \(error?.localizedDescription ?? "unknown error")")
+                    return
                 }
-                self?.updateUnreadCount()
+                
+                self?.notifications = documents.map {
+                    UserNotification(id: $0.documentID, data: $0.data())
+                }
+                
+                self?.unreadNotifications = self?.notifications.filter { !$0.read }.count ?? 0
+                print("Fetched \(documents.count) notifications, \(self?.unreadNotifications ?? 0) unread")
             }
     }
     
-    func markNotificationAsSeen(requestId: String) {
-        db.collection("connectionRequests").document(requestId).updateData([
-            "seen": true
-        ]) { error in
+    func markAsRead(_ notificationId: String) {
+        db.collection("notifications").document(notificationId).updateData([
+            "read": true
+        ])
+    }
+    
+    func createNotification(
+        notificationData: UserNotification,
+        receiverId: String
+    ) {
+        guard !receiverId.isEmpty else {
+            print("❌ Error: Receiver ID is empty.")
+            return
+        }
+        
+        // Prepare Firestore data
+        let data: [String: Any] = [
+            "type": notificationData.type.rawValue,
+            "senderId": notificationData.senderId,
+            "receiverId": receiverId,
+            "timestamp": FieldValue.serverTimestamp(),
+            "read": false,
+            "senderName": notificationData.senderName,
+            "senderProfileUrl": notificationData.senderProfileUrl,
+            "relatedDocumentId": notificationData.relatedDocumentId ?? ""
+        ]
+        
+        print("📬 Creating notification: \(data)")
+        
+        // Add the notification to Firestore
+        db.collection("notifications").addDocument(data: data) { error in
             if let error = error {
-                print("Error marking notification as seen: \(error.localizedDescription)")
+                print("❌ Error creating notification: \(error.localizedDescription)")
             } else {
-                DispatchQueue.main.async {
-                    // Update local state
-                    if let index = self.receivedRequests.firstIndex(where: { $0.id == requestId }) {
-                        self.receivedRequests.remove(at: index)
-                    }
-                    if let index = self.acceptedRequests.firstIndex(where: { $0.id == requestId }) {
-                        self.acceptedRequests.remove(at: index)
-                    }
-                    self.updateUnreadCount()
-                }
+                print("✅ Notification created successfully!")
             }
         }
     }
     
-    private func updateUnreadCount() {
-        unreadNotifications = receivedRequests.count + acceptedRequests.count
+    deinit {
+        listener?.remove()
     }
-} 
+}

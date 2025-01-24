@@ -184,14 +184,15 @@ struct HomeView: View {
                     Button(action: { showingNotifications = true }) {
                         ZStack {
                             Image(systemName: "bell.fill")
-                                .imageScale(.small)
+                            
                             if notificationManager.unreadNotifications > 0 {
                                 Text("\(notificationManager.unreadNotifications)")
-                                    .font(.system(size: 10))
+                                    .font(.caption2.bold())
+                                    .foregroundColor(.white)
                                     .padding(4)
                                     .background(Color.red)
                                     .clipShape(Circle())
-                                    .offset(x: 8, y: -8)
+                                    .offset(x: 10, y: -10)
                             }
                         }
                     }
@@ -218,13 +219,11 @@ struct HomeView: View {
                 NotificationsView()
             }
             .onAppear {
-                
                 locationManager.requestLocation()
                 Task {
                     await fetchUserProfile()
                     await fetchUsers()
                     await fetchInterests()
-                    
                 }
                 notificationManager.fetchNotifications()
             }
