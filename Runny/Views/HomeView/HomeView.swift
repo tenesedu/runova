@@ -112,7 +112,7 @@ struct HomeView: View {
                     // Action Buttons
                     HStack(spacing: 16) {
                         // Create Run Button
-                        NavigationLink(destination: CreateView()) {
+                        NavigationLink(destination: CreateRunView().navigationBarBackButtonHidden(true)) {
                             ActionButton(
                                 title: "Create Run".localized,
                                 icon: "plus.circle.fill",
@@ -121,7 +121,7 @@ struct HomeView: View {
                         }
                         
                         // Join Run Button
-                        NavigationLink(destination: RunsView()) {
+                        NavigationLink(destination: RunsView().navigationBarBackButtonHidden(true)) {
                             ActionButton(
                                 title: "Join Run".localized,
                                 icon: "person.2.fill",

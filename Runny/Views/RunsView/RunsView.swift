@@ -3,6 +3,7 @@ import FirebaseAuth
 import FirebaseFirestore
 
 struct RunsView: View {
+    @Environment(\.dismiss) private var dismiss
     @State private var createdRuns: [Run] = []
     @State private var joinedRuns: [Run] = []
     @State private var allRuns: [Run] = []
@@ -134,6 +135,18 @@ struct RunsView: View {
             .navigationTitle("Runs")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                        Button(action: {
+                            dismiss() 
+                        }) {
+                            HStack {
+                                Image(systemName: "chevron.left")
+                                Text("Back")
+                            }
+                            .foregroundColor(.black)
+                            .font(.system(size: 16, weight: .medium))
+                        }
+                    }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         showingCreateRun = true
@@ -145,7 +158,7 @@ struct RunsView: View {
                 }
             }
             .sheet(isPresented: $showingCreateRun) {
-                CreateView()
+                CreateRunView()
             }
             .onAppear {
                 fetchRuns()

@@ -15,6 +15,7 @@ struct Run: Identifiable {
     let createdBy: String
     let createdAt: Date
     let title: String
+    let status: String
     
     var isFull: Bool {
         return currentParticipants.count >= maxParticipants
@@ -38,5 +39,6 @@ struct Run: Identifiable {
         self.createdBy = data["createdBy"] as? String ?? ""
         self.createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
         self.title = data["title"] as? String ?? ""
+        self.status = data["status"] as? String ?? ""
     }
 } 
