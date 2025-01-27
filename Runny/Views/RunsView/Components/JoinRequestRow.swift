@@ -24,7 +24,7 @@ struct JoinRequestRow: View {
             
             // User Info
             VStack(alignment: .leading, spacing: 4) {
-                Text(request.userName)
+                Text(request.userName ?? "None")
                     .font(.headline)
                 Text(request.timestamp, style: .relative)
                     .font(.caption)

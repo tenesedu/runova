@@ -4,41 +4,36 @@ import FirebaseFirestore
 
 struct RunsView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var createdRuns: [Run] = []
-    @State private var joinedRuns: [Run] = []
-    @State private var allRuns: [Run] = []
-    @State private var selectedSegment = 0
-    @State private var showingCreateRun = false
-    @State private var searchText = ""
-    @State private var isRefreshing = false
+    @StateObject private var vm = RunsViewModel()
+    @StateObject private var runViewModel = RunViewModel()
     
     var filteredAllRuns: [Run] {
-        if searchText.isEmpty {
-            return allRuns
+        if vm.searchText.isEmpty {
+            return vm.allRuns
         }
-        return allRuns.filter { run in
-            run.name.localizedCaseInsensitiveContains(searchText) ||
-            run.location.localizedCaseInsensitiveContains(searchText)
+        return vm.allRuns.filter { run in
+            run.name.localizedCaseInsensitiveContains(vm.searchText) ||
+            run.location.localizedCaseInsensitiveContains(vm.searchText)
         }
     }
     
     var filteredJoinedRuns: [Run] {
-        if searchText.isEmpty {
-            return joinedRuns
+        if vm.searchText.isEmpty {
+            return vm.joinedRuns
         }
-        return joinedRuns.filter { run in
-            run.name.localizedCaseInsensitiveContains(searchText) ||
-            run.location.localizedCaseInsensitiveContains(searchText)
+        return vm.joinedRuns.filter { run in
+            run.name.localizedCaseInsensitiveContains(vm.searchText) ||
+            run.location.localizedCaseInsensitiveContains(vm.searchText)
         }
     }
     
     var filteredCreatedRuns: [Run] {
-        if searchText.isEmpty {
-            return createdRuns
+        if vm.searchText.isEmpty {
+            return vm.createdRuns
         }
-        return createdRuns.filter { run in
-            run.name.localizedCaseInsensitiveContains(searchText) ||
-            run.location.localizedCaseInsensitiveContains(searchText)
+        return vm.createdRuns.filter { run in
+            run.name.localizedCaseInsensitiveContains(vm.searchText) ||
+            run.location.localizedCaseInsensitiveContains(vm.searchText)
         }
     }
     
@@ -50,12 +45,12 @@ struct RunsView: View {
                     HStack {
                         Image(systemName: "magnifyingglass")
                             .foregroundColor(.gray)
-                        TextField("Search runs...", text: $searchText)
+                        TextField("Search runs...", text: $vm.searchText)
                             .textFieldStyle(PlainTextFieldStyle())
                         
-                        if !searchText.isEmpty {
+                        if !vm.searchText.isEmpty {
                             Button(action: {
-                                searchText = ""
+                                vm.searchText = ""
                             }) {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.gray)
@@ -71,7 +66,7 @@ struct RunsView: View {
                     .padding(.horizontal)
                     
                     // Segment Control
-                    Picker("Run Type", selection: $selectedSegment) {
+                    Picker("Run Type", selection: $vm.selectedSegment) {
                         Text("All").tag(0)
                         Text("Joined").tag(1)
                         Text("Created").tag(2)
@@ -81,44 +76,41 @@ struct RunsView: View {
                     
                     // Runs List
                     VStack(spacing: 15) {
-                        switch selectedSegment {
+                        switch vm.selectedSegment {
                         case 0: // All Runs
                             if filteredAllRuns.isEmpty {
                                 EmptyStateView(
-                                    message: searchText.isEmpty ? "No runs available" : "No results found",
+                                    message: vm.searchText.isEmpty ? "No runs available" : "No results found",
                                     systemImage: "figure.run.circle",
-                                    description: searchText.isEmpty ? "Be the first to create a run!" : "Try adjusting your search"
+                                    description: vm.searchText.isEmpty ? "Be the first to create a run!" : "Try adjusting your search"
                                 )
                             } else {
                                 ForEach(filteredAllRuns) { run in
-                                    RunCardView(run: run)
+                                    RunCardView(run: run, viewModel: runViewModel)
                                         .padding(.horizontal, 16)
-                                        .onTapGesture {
-                                            print("Tapped run with ID: \(run.id)")
-                                        }
                                 }
                             }
                         case 1: // Joined Runs
                             if filteredJoinedRuns.isEmpty {
                                 EmptyStateView(
-                                    message: searchText.isEmpty ? "You haven't joined any runs yet" : "No results found",
+                                    message: vm.searchText.isEmpty ? "You haven't joined any runs yet" : "No results found",
                                     systemImage: "figure.run.circle"
                                 )
                             } else {
                                 ForEach(filteredJoinedRuns) { run in
-                                    RunCardView(run: run)
+                                    RunCardView(run: run, viewModel: runViewModel)
                                         .padding(.horizontal, 16)
                                 }
                             }
                         case 2: // Created Runs
                             if filteredCreatedRuns.isEmpty {
                                 EmptyStateView(
-                                    message: searchText.isEmpty ? "You haven't created any runs yet" : "No results found",
+                                    message: vm.searchText.isEmpty ? "You haven't created any runs yet" : "No results found",
                                     systemImage: "figure.run.circle"
                                 )
                             } else {
                                 ForEach(filteredCreatedRuns) { run in
-                                    RunCardView(run: run)
+                                    RunCardView(run: run, viewModel: runViewModel)
                                         .padding(.horizontal, 16)
                                 }
                             }
@@ -135,21 +127,10 @@ struct RunsView: View {
             .navigationTitle("Runs")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                        Button(action: {
-                            dismiss() 
-                        }) {
-                            HStack {
-                                Image(systemName: "chevron.left")
-                                Text("Back")
-                            }
-                            .foregroundColor(.black)
-                            .font(.system(size: 16, weight: .medium))
-                        }
-                    }
+               
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        showingCreateRun = true
+                        vm.showingCreateRun = true
                     }) {
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 22))
@@ -157,62 +138,20 @@ struct RunsView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingCreateRun) {
+            .sheet(isPresented: $vm.showingCreateRun) {
                 CreateRunView()
             }
             .onAppear {
-                fetchRuns()
+                vm.fetchRuns()
             }
         }
     }
     
-    private func fetchRuns() {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let db = Firestore.firestore()
-        
-        // Fetch all runs
-        db.collection("runs")
-            .order(by: "time", descending: false) // Order by run time instead of timestamp
-            .addSnapshotListener { querySnapshot, error in
-                if let error = error {
-                    print("Error fetching all runs: \(error.localizedDescription)")
-                    return
-                }
-                guard let documents = querySnapshot?.documents else { return }
-                allRuns = documents.map { Run(id: $0.documentID, data: $0.data()) }
-            }
-        
-        // Fetch created runs
-        db.collection("runs")
-            .whereField("createdBy", isEqualTo: userId)
-            .order(by: "time", descending: false)
-            .addSnapshotListener { querySnapshot, error in
-                if let error = error {
-                    print("Error fetching created runs: \(error.localizedDescription)")
-                    return
-                }
-                guard let documents = querySnapshot?.documents else { return }
-                createdRuns = documents.map { Run(id: $0.documentID, data: $0.data()) }
-            }
-        
-        // Fetch joined runs
-        db.collection("runs")
-            .whereField("currentParticipants", arrayContains: userId)
-            .order(by: "time", descending: false)
-            .addSnapshotListener { querySnapshot, error in
-                if let error = error {
-                    print("Error fetching joined runs: \(error.localizedDescription)")
-                    return
-                }
-                guard let documents = querySnapshot?.documents else { return }
-                joinedRuns = documents.map { Run(id: $0.documentID, data: $0.data()) }
-                    .filter { $0.createdBy != userId } // Exclude runs created by the user
-            }
-    }
+    
     
     private func refreshData() async {
         await MainActor.run {
-            fetchRuns()
+            vm.fetchRuns()
         }
     }
 }

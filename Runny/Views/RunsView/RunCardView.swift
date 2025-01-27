@@ -4,14 +4,19 @@ import FirebaseAuth
 
 struct RunCardView: View {
     let run: Run
+    @StateObject private var viewModel: RunViewModel
     @State private var creatorProfileUrl: String = ""
     @State private var creatorName: String = ""
     @State private var showingParticipants = false
     @State private var participants: [UserApp] = []
-    @State private var hasRequestedToJoin = false
+    
+    init(run: Run, viewModel: RunViewModel) {
+        self.run = run
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
     
     var body: some View {
-        NavigationLink(destination: RunDetailView(run: run)) {
+        NavigationLink(destination: RunDetailView(run: run, viewModel: viewModel)) {
             VStack(alignment: .leading, spacing: 16) {
                 // Header with creator info and time
                 HStack(alignment: .center) {
@@ -110,6 +115,37 @@ struct RunCardView: View {
                         }
                     }
                 }
+                
+                // Status Indicator and Join Button
+                if run.status == .pending {
+                    // Show Request Join button only for pending runs
+                    Button(action: {
+                        viewModel.requestToJoin(run: run)
+                    }) {
+                        Text(viewModel.hasRequestedToJoin[run.id] == true ? "Requested" : "Request Join")
+                            .font(.system(size: 16, weight: .semibold))
+                            .frame(maxWidth: .infinity)
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(viewModel.hasRequestedToJoin[run.id] == true ? Color.gray : Color.blue)
+                            )
+                    }
+                    .disabled(viewModel.hasRequestedToJoin[run.id] == true)
+                } else {
+                    // Show status indicator for non-pending runs
+                    HStack {
+                        Spacer()
+                        Text(run.status.rawValue.capitalized)
+                            .font(.system(size: 14, weight: .medium))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(statusBackgroundColor(for: run.status))
+                            .foregroundColor(statusTextColor(for: run.status))
+                            .cornerRadius(12)
+                    }
+                }
             }
             .padding()
             .background(
@@ -117,27 +153,34 @@ struct RunCardView: View {
                     .fill(Color.white)
                     .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(statusBorderColor(for: run.status), lineWidth: 1)
+            )
         }
         .buttonStyle(PlainButtonStyle())
         .onAppear {
             fetchCreatorInfo()
-            checkJoinRequest()
+            viewModel.checkJoinRequest(for: run)
             fetchParticipants()
         }
     }
     
+    // Helper function to format date
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         return formatter.string(from: date)
     }
     
+    // Helper function to format time
     private func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
     
+    // Fetch creator info
     private func fetchCreatorInfo() {
         guard !run.createdBy.isEmpty else {
             print("Error: Creator ID is empty")
@@ -156,11 +199,7 @@ struct RunCardView: View {
         }
     }
     
-    private func checkJoinRequest() {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        hasRequestedToJoin = run.joinRequests.contains(userId)
-    }
-    
+    // Fetch participants
     private func fetchParticipants() {
         participants.removeAll() // Clear the existing participants
         let db = Firestore.firestore() // Initialize Firestore
@@ -192,4 +231,69 @@ struct RunCardView: View {
             }
         }
     }
+    
+    // Helper function to get background color for status
+    private func statusBackgroundColor(for status: RunStatus) -> Color {
+        switch status {
+        case .pending:
+            return Color.gray.opacity(0.2)
+        case .confirmed:
+            return Color.green.opacity(0.2)
+        case .canceled:
+            return Color.red.opacity(0.2)
+        case .finalized:
+            return Color.blue.opacity(0.2)
+        }
+    }
+    
+    // Helper function to get text color for status
+    private func statusTextColor(for status: RunStatus) -> Color {
+        switch status {
+        case .pending:
+            return Color.gray
+        case .confirmed:
+            return Color.green
+        case .canceled:
+            return Color.red
+        case .finalized:
+            return Color.blue
+        }
+    }
+    
+    // Helper function to get border color for status
+    private func statusBorderColor(for status: RunStatus) -> Color {
+        switch status {
+        case .pending:
+            return Color.gray.opacity(0.5)
+        case .confirmed:
+            return Color.green.opacity(0.5)
+        case .canceled:
+            return Color.red.opacity(0.5)
+        case .finalized:
+            return Color.blue.opacity(0.5)
+        }
+    }
+}
+
+#Preview {
+    let mockRun = Run(
+        id: "run123",
+        data: [
+            "name": "Morning Jog",
+            "description": "A relaxing jog around the park.",
+            "time": Date(),
+            "location": "Central Park",
+            "distance": 5.0,
+            "averagePace": "5:30/km",
+            "maxParticipants": 10,
+            "currentParticipants": ["user1", "user2"],
+            "joinRequests": [],
+            "createdBy": "user1",
+            "terrain": "Flat",
+            "status": "Pending"
+        ]
+    )
+    
+    return RunCardView(run: mockRun, viewModel: RunViewModel())
+        .padding()
 }

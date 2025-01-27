@@ -1,5 +1,12 @@
 import FirebaseFirestore
 
+enum RunStatus: String, CaseIterable {
+    case pending = "Pending"
+    case confirmed = "Confirmed"
+    case canceled = "Canceled"
+    case finalized = "Finalized"
+}
+
 struct Run: Identifiable {
     let id: String
     let name: String
@@ -15,7 +22,7 @@ struct Run: Identifiable {
     let createdBy: String
     let createdAt: Date
     let title: String
-    let status: String
+    let status: RunStatus
     
     var isFull: Bool {
         return currentParticipants.count >= maxParticipants
@@ -39,6 +46,25 @@ struct Run: Identifiable {
         self.createdBy = data["createdBy"] as? String ?? ""
         self.createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
         self.title = data["title"] as? String ?? ""
-        self.status = data["status"] as? String ?? ""
+        self.status = RunStatus(rawValue: data["status"] as? String ?? "") ?? .pending
+    }
+    
+   
+    
+    func fetchJoinRequests(completion: @escaping ([String]) -> Void) {
+        let db = Firestore.firestore()
+        db.collection("runs").document(id)
+          .collection("joinRequests")
+          .whereField("status", isEqualTo: "pending")
+          .getDocuments { snapshot, error in
+            if let error = error {
+                print("Error fetching join requests: \(error.localizedDescription)")
+                completion([])
+                return
+            }
+            
+            let requests = snapshot?.documents.compactMap { $0.data()["userId"] as? String } ?? []
+            completion(requests)
+        }
     }
 } 

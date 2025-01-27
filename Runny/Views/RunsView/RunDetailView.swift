@@ -18,6 +18,7 @@ struct RunDetailView: View {
     @State private var showingEditSheet = false
     @State private var showingDeleteAlert = false
     @State private var showingActionSheet = false
+    @ObservedObject var viewModel: RunViewModel
     
     private var isCreator: Bool {
         run.createdBy == Auth.auth().currentUser?.uid
@@ -135,16 +136,18 @@ struct RunDetailView: View {
                 
                 // Join Button (if not creator and not full)
                 if !isCreator && !isParticipant && !run.isFull {
-                    Button(action: requestToJoin) {
-                        Text(hasRequestedToJoin ? "Request Pending" : "Request to Join")
+                    Button(action: {
+                        viewModel.requestToJoin(run: run)
+                    }) {
+                        Text(viewModel.hasRequestedToJoin[run.id] == true ? "Requested" : "Request Join")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(hasRequestedToJoin ? Color.gray : Color.black)
+                            .background(viewModel.hasRequestedToJoin[run.id] == true ? Color.gray : Color.black)
                             .cornerRadius(12)
                     }
-                    .disabled(hasRequestedToJoin)
+                    .disabled(viewModel.hasRequestedToJoin[run.id] == true)
                     .padding()
                 }
                 
@@ -200,6 +203,7 @@ struct RunDetailView: View {
         }
         .onAppear {
             verifyAndFetchData()
+            viewModel.checkJoinRequest(for: run)
         }
     }
     
@@ -302,7 +306,22 @@ struct RunDetailView: View {
     
     private func checkJoinRequest() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
-        hasRequestedToJoin = run.joinRequests.contains(userId)
+        
+        let db = Firestore.firestore()
+        let joinRequestRef = db.collection("runs").document(run.id)
+                          .collection("joinRequests").document(userId)
+        
+        joinRequestRef.getDocument { snapshot, error in
+            if let error = error {
+                print("Error checking join request: \(error.localizedDescription)")
+                return
+            }
+            
+            if let snapshot = snapshot, snapshot.exists {
+                let status = snapshot.data()?["status"] as? String ?? ""
+                hasRequestedToJoin = status == "pending"
+            }
+        }
     }
     
     private func requestToJoin() {
@@ -311,10 +330,17 @@ struct RunDetailView: View {
         
         isLoading = true
         let db = Firestore.firestore()
+        let joinRequestRef = db.collection("runs").document(run.id)
+                          .collection("joinRequests").document(userId)
         
-        db.collection("runs").document(run.id).updateData([
-            "joinRequests": FieldValue.arrayUnion([userId])
-        ]) { error in
+        // Create a join request document
+        let requestData: [String: Any] = [
+            "userId": userId,
+            "status": "pending",
+            "timestamp": FieldValue.serverTimestamp()
+        ]
+        
+        joinRequestRef.setData(requestData) { error in
             isLoading = false
             if let error = error {
                 alertMessage = "Error requesting to join: \(error.localizedDescription)"
