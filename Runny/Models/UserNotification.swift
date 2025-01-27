@@ -10,12 +10,14 @@ struct UserNotification: Identifiable {
     let senderName: String
     let senderProfileUrl: String
     let relatedDocumentId: String? // Optional
+    let runId: String?
     
     enum NotificationType: String, Codable {
         case friendRequest = "friend_request"
         case friendAccepted = "friend_accepted"
-        case messageReceived = "message_received"
-        case eventInvitation = "event_invitation"
+        case joinRequest = "join_request"
+        case joinRequestAccepted = "join_request_accepted"
+     
     }
     
     var message: String {
@@ -24,11 +26,10 @@ struct UserNotification: Identifiable {
             return "\(senderName) sent you a friend request"
         case .friendAccepted:
             return "\(senderName) accepted your friend request"
-            
-        case .messageReceived:
-            return "\(senderName) sent you a message"
-        case .eventInvitation:
-            return "\(senderName) invited you to an event"
+        case .joinRequest:
+            return "\(senderName) requested to join your run"
+        case .joinRequestAccepted:
+            return "\(senderName) accepted your request to join their run"
         }
     }
     
@@ -40,9 +41,10 @@ struct UserNotification: Identifiable {
            read: Bool = false,
            senderName: String,
            senderProfileUrl: String,
-           relatedDocumentId: String? = nil
+           relatedDocumentId: String? = nil,
+           runId: String? = nil
        ) {
-           self.id = "" // This will be set when fetching from Firestore
+           self.id = "" 
            self.type = type
            self.senderId = senderId
            self.receiverId = receiverId
@@ -51,6 +53,7 @@ struct UserNotification: Identifiable {
            self.senderName = senderName
            self.senderProfileUrl = senderProfileUrl
            self.relatedDocumentId = relatedDocumentId
+           self.runId = runId
        }
     
     init(id: String, data: [String: Any]) {
@@ -63,5 +66,6 @@ struct UserNotification: Identifiable {
         self.senderName = data["senderName"] as? String ?? ""
         self.senderProfileUrl = data["senderProfileUrl"] as? String ?? ""
         self.relatedDocumentId = data["relatedDocumentId"] as? String
+        self.runId = data["runId"] as? String
     }
 } 

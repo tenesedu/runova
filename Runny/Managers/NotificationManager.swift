@@ -58,7 +58,8 @@ class NotificationManager: ObservableObject {
             "read": false,
             "senderName": notificationData.senderName,
             "senderProfileUrl": notificationData.senderProfileUrl,
-            "relatedDocumentId": notificationData.relatedDocumentId ?? ""
+            "relatedDocumentId": notificationData.relatedDocumentId ?? "",
+            "runId": notificationData.runId ?? ""
         ]
         
         print("📬 Creating notification: \(data)")

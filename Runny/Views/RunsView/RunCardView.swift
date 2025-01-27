@@ -15,6 +15,11 @@ struct RunCardView: View {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
     
+    private var isOrganizer: Bool {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return false }
+        return run.createdBy == currentUserId
+    }
+    
     var body: some View {
         NavigationLink(destination: RunDetailView(run: run, viewModel: viewModel)) {
             VStack(alignment: .leading, spacing: 16) {
@@ -118,21 +123,37 @@ struct RunCardView: View {
                 
                 // Status Indicator and Join Button
                 if run.status == .pending {
-                    // Show Request Join button only for pending runs
-                    Button(action: {
-                        viewModel.requestToJoin(run: run)
-                    }) {
-                        Text(viewModel.hasRequestedToJoin[run.id] == true ? "Requested" : "Request Join")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(viewModel.hasRequestedToJoin[run.id] == true ? Color.gray : Color.blue)
-                            )
+                    if isOrganizer {
+                        // Show organizer badge instead of join button
+                        HStack {
+                            Spacer()
+                            Text("You're the organizer")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.orange)
+                                )
+                        }
+                    } else {
+                        // Show Request Join button for non-organizers
+                        Button(action: {
+                            viewModel.requestToJoin(run: run)
+                        }) {
+                            Text(viewModel.hasRequestedToJoin[run.id] == true ? "Requested" : "Request Join")
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(maxWidth: .infinity)
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(viewModel.hasRequestedToJoin[run.id] == true ? Color.gray : Color.blue)
+                                )
+                        }
+                        .disabled(viewModel.hasRequestedToJoin[run.id] == true)
                     }
-                    .disabled(viewModel.hasRequestedToJoin[run.id] == true)
                 } else {
                     // Show status indicator for non-pending runs
                     HStack {
@@ -161,7 +182,7 @@ struct RunCardView: View {
         .buttonStyle(PlainButtonStyle())
         .onAppear {
             fetchCreatorInfo()
-            viewModel.checkJoinRequest(for: run)
+            
             fetchParticipants()
         }
     }

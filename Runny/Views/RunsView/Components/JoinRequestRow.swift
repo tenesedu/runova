@@ -24,7 +24,7 @@ struct JoinRequestRow: View {
             
             // User Info
             VStack(alignment: .leading, spacing: 4) {
-                Text(request.userName ?? "None")
+                Text(request.userName)
                     .font(.headline)
                 Text(request.timestamp, style: .relative)
                     .font(.caption)
@@ -58,8 +58,9 @@ struct JoinRequestRow: View {
     }
     
     private func loadUserImage() {
-        guard let imageUrl = request.userImage,
-              let url = URL(string: imageUrl) else { return }
+        guard let url = URL(string: request.userImage) else {
+              return 
+          }
         
         URLSession.shared.dataTask(with: url) { data, _, _ in
             if let data = data, let image = UIImage(data: data) {

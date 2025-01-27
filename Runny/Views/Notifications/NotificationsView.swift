@@ -4,11 +4,15 @@ import FirebaseFirestore
 struct NotificationsView: View {
     @StateObject private var notificationManager = NotificationManager()
     @StateObject private var connectionManager = ConnectionManager()
+    @StateObject private var runViewModel = RunViewModel()
     @Environment(\.dismiss) private var dismiss
     @State private var showingConnectionRequests = false
     @State private var selectedUser: UserApp?
     @State private var showingUserProfile = false
     @State private var selectedTab = 0
+    @State private var showingRunDetail = false
+    @State private var selectedRun: Run?
+    
     
     var body: some View {
         NavigationView {
@@ -21,7 +25,9 @@ struct NotificationsView: View {
                 } else if showingConnectionRequests {
                     // Show ConnectionsView when showingConnectionRequests is true
                     ConnectionsView(selectedTab: 1)
-                } else {
+                } else if showingRunDetail, let run = selectedRun {
+                    RunDetailView(run: run, viewModel: runViewModel)
+                }else {
                     // Show NotificationsView when neither showingUserProfile nor showingConnectionRequests is true
                     if notificationManager.notifications.isEmpty {
                         VStack(spacing: 16) {
@@ -86,7 +92,37 @@ struct NotificationsView: View {
                     showingUserProfile = true
                 }
             }
-        case .messageReceived, .eventInvitation:
+        case .joinRequest:
+            guard let relatedDocumentId = notification.relatedDocumentId,
+                  let runId = notification.runId else {
+                print("❌ Missing relatedDocumentId or runId in notification")
+                return
+            }
+            
+            let db = Firestore.firestore()
+            
+            db.collection("runs").document(runId).getDocument { snapshot, error in
+                if let error = error {
+                    print(error.localizedDescription)
+                    return
+                }
+                
+                guard let runData = snapshot?.data() else {
+                    print("❌ Failed to get run data for join request notification")
+                    return
+                }
+                
+                let run = Run(id: runId, data: runData)
+                
+                // Navigate to RunDetailView
+                DispatchQueue.main.async {
+                    selectedRun = run
+                    showingRunDetail = true
+                }
+            }
+            
+            
+        case .joinRequestAccepted:
             break
         }
     }

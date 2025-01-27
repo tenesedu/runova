@@ -21,9 +21,6 @@ class ConnectionManager: ObservableObject {
             return
         }
 
-        print("👤 Current user: \(currentUser.uid)")
-        print("👥 Sending request to: \(userId)")
-
         // Create connection request
         let request = ConnectionRequest(
             senderId: currentUser.uid,
@@ -69,10 +66,8 @@ class ConnectionManager: ObservableObject {
                     receiverId: userId,
                     senderName: senderName,
                     senderProfileUrl: senderProfileUrl,
-                    relatedDocumentId: requestDocumentRef.documentID // Use the document ID here
+                    relatedDocumentId: requestDocumentRef.documentID
                 )
-
-                print("📝 Created notification object: \(notification)")
 
                 // Add notification
                 self?.notificationManager.createNotification(

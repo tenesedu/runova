@@ -1,6 +1,7 @@
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
+import Foundation
 
 
 struct RunDetailView: View {
@@ -10,7 +11,7 @@ struct RunDetailView: View {
     @State private var creatorProfileUrl: String = ""
     @State private var creatorName: String = ""
     @State private var participants: [UserApp] = []
-    @State private var pendingRequests: [UserApp] = []
+    @State private var pendingRequests: [JoinRequest] = []
     @State private var hasRequestedToJoin = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
@@ -118,9 +119,9 @@ struct RunDetailView: View {
                         
                         ForEach(pendingRequests) { requester in
                             HStack {
-                                ParticipantView(user: requester)
+                                PendingRequestView(user: requester)
                                 Spacer()
-                                Button(action: { acceptRequest(for: requester.id) }) {
+                                Button(action: { acceptRequest(for: requester) }) {
                                     Text("Accept")
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 16)
@@ -129,6 +130,7 @@ struct RunDetailView: View {
                                         .cornerRadius(8)
                                 }
                             }
+                            .padding(.horizontal)
                         }
                     }
                     .padding(.horizontal)
@@ -203,7 +205,6 @@ struct RunDetailView: View {
         }
         .onAppear {
             verifyAndFetchData()
-            viewModel.checkJoinRequest(for: run)
         }
     }
     
@@ -254,8 +255,8 @@ struct RunDetailView: View {
     }
     
     private func fetchParticipants() {
-        participants.removeAll() // Clear the existing participants
-        let db = Firestore.firestore() // Initialize Firestore
+        participants.removeAll()
+        let db = Firestore.firestore()
 
         // Fetch each participant's data
         for userId in run.currentParticipants {
@@ -287,86 +288,96 @@ struct RunDetailView: View {
     
     private func fetchPendingRequests() {
         pendingRequests.removeAll()
-        for userId in run.joinRequests {
-            guard !userId.isEmpty else { continue }
-            
-            let db = Firestore.firestore()
-            db.collection("users").document(userId).getDocument { snapshot, error in
-                if let error = error {
-                    print("Error fetching request: \(error.localizedDescription)")
-                    return
-                }
-                if let data = snapshot?.data() {
-                    let user = UserApp(id: userId, data: data)
-                    pendingRequests.append(user)
-                }
-            }
-        }
-    }
-    
-    private func checkJoinRequest() {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
         
         let db = Firestore.firestore()
-        let joinRequestRef = db.collection("runs").document(run.id)
-                          .collection("joinRequests").document(userId)
+        let joinRequestsRef = db.collection("runs").document(run.id)
+                              .collection("joinRequests")
+                              .whereField("status", isEqualTo: "pending")
         
-        joinRequestRef.getDocument { snapshot, error in
+        joinRequestsRef.getDocuments { snapshot, error in
             if let error = error {
-                print("Error checking join request: \(error.localizedDescription)")
+                print("Error fetching pending requests: \(error.localizedDescription)")
                 return
             }
             
-            if let snapshot = snapshot, snapshot.exists {
-                let status = snapshot.data()?["status"] as? String ?? ""
-                hasRequestedToJoin = status == "pending"
+            guard let documents = snapshot?.documents else {
+                print("No pending requests found")
+                return
+            }
+            
+            for document in documents {
+                let data = document.data()
+             
+                let userId = data["userId"] as? String ?? ""
+                let userName = data["senderName"] as? String ?? ""
+                let userImage = data["senderImage"] as? String ?? ""
+                let status = data["status"] as? String ?? "pending"
+                let timestamp = (data["timestamp"] as? Timestamp)?.dateValue() ?? Date()
+
+                
+                let joinRequest = JoinRequest(
+                    id: document.documentID,
+                    status: status,
+                    userId: userId,
+                    userName: userName,
+                    userImage: userImage,
+                    timestamp: timestamp
+                  
+                )
+                
+                DispatchQueue.main.async {
+                    pendingRequests.append(joinRequest)
+                }
             }
         }
     }
     
-    private func requestToJoin() {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        guard !isLoading else { return }
-        
-        isLoading = true
-        let db = Firestore.firestore()
-        let joinRequestRef = db.collection("runs").document(run.id)
-                          .collection("joinRequests").document(userId)
-        
-        // Create a join request document
-        let requestData: [String: Any] = [
-            "userId": userId,
-            "status": "pending",
-            "timestamp": FieldValue.serverTimestamp()
-        ]
-        
-        joinRequestRef.setData(requestData) { error in
-            isLoading = false
-            if let error = error {
-                alertMessage = "Error requesting to join: \(error.localizedDescription)"
-                showingAlert = true
-            } else {
-                hasRequestedToJoin = true
-            }
-        }
-    }
     
-    private func acceptRequest(for userId: String) {
+    private func acceptRequest(for joinRequest: JoinRequest) {
         guard !isLoading else { return }
         isLoading = true
         
         let db = Firestore.firestore()
-        db.collection("runs").document(run.id).updateData([
-            "currentParticipants": FieldValue.arrayUnion([userId]),
-            "joinRequests": FieldValue.arrayRemove([userId])
+        let runRef = db.collection("runs").document(run.id)
+        let joinRequestRef = runRef.collection("joinRequests").document(joinRequest.id)
+        
+        // Update the status of the join request to "accepted"
+        joinRequestRef.updateData([
+            "status": "accepted"
         ]) { error in
-            isLoading = false
             if let error = error {
-                alertMessage = "Error accepting request: \(error.localizedDescription)"
+                isLoading = false
+                alertMessage = "Error updating join request status: \(error.localizedDescription)"
                 showingAlert = true
-            } else {
-                pendingRequests.removeAll { $0.id == userId }
-                fetchParticipants()
+                return
+            }
+            
+            // Add the user to the currentParticipants array
+            runRef.updateData([
+                "currentParticipants": FieldValue.arrayUnion([joinRequest.userId])
+            ]) { error in
+                isLoading = false
+                if let error = error {
+                    alertMessage = "Error adding user to participants: \(error.localizedDescription)"
+                    showingAlert = true
+                } else {
+                    // Create notification for the user
+                    let notification = UserNotification(
+                        type: .joinRequestAccepted,
+                        senderId: run.createdBy,
+                        receiverId: joinRequest.userId,
+                        senderName: creatorName,
+                        senderProfileUrl: creatorProfileUrl,
+                        runId: run.id
+                    )
+                    
+                    // Send notification
+                    NotificationManager().createNotification(notificationData: notification, receiverId: joinRequest.userId)
+                    
+                    // Remove from pending requests and refresh
+                    pendingRequests.removeAll { $0.id == joinRequest.id }
+                    fetchParticipants()
+                }
             }
         }
     }
@@ -440,6 +451,36 @@ struct ParticipantView: View {
                 .lineLimit(1)
         }
         .frame(width: 60)
+    }
+}
+
+struct PendingRequestView: View {
+    let user: JoinRequest
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            AsyncImage(url: URL(string: user.userImage)) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Circle()
+                    .fill(Color.gray.opacity(0.3))
+            }
+            .frame(width: 40, height: 40)
+            .clipShape(Circle())
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(user.userName)
+                    .font(.system(size: 16, weight: .medium))
+                Text("Requested \(user.timestamp.timeAgo())")
+                    .font(.system(size: 14))
+                    .foregroundColor(.gray)
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 8)
     }
 }
 
