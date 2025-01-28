@@ -68,7 +68,7 @@ struct InterestCard: View {
                             .font(.title3)
                             .foregroundColor(interest.color)
                         
-                        Text(interest.name)
+                        Text(interest.name.localized)
                             .font(.headline)
                             .foregroundColor(.white)
                     }
@@ -76,7 +76,7 @@ struct InterestCard: View {
                     Spacer()
                     
                     // Followers Count
-                    Text("\(followersCount) followers")
+                    Text(String(format: NSLocalizedString("followers", comment: ""), followersCount))
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.8))
                 }
@@ -85,7 +85,7 @@ struct InterestCard: View {
                 Button(action: {
                     toggleFollow()
                 }) {
-                    Text(isFollowing ? "Following" : "Follow")
+                    Text(isFollowing ? NSLocalizedString("Following", comment: "") :  NSLocalizedString("Follow", comment: ""))
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)

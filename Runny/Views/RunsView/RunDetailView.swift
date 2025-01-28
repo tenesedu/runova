@@ -51,7 +51,7 @@ struct RunDetailView: View {
                             Text(creatorName)
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                            Text("Organizer")
+                            Text(NSLocalizedString("Organizer", comment: ""))
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                         }
@@ -93,10 +93,22 @@ struct RunDetailView: View {
                         GridItem(.flexible()),
                         GridItem(.flexible())
                     ], spacing: 20) {
-                        StatItem(title: "Distance", value: "\(String(format: "%.1f", run.distance))km", icon: "figure.run")
-                        StatItem(title: "Pace", value: run.averagePace, icon: "stopwatch")
+                        StatItem(
+                            title: NSLocalizedString("Distance", comment: "Run distance stat"), 
+                            value: "\(String(format: "%.1f", run.distance))km", 
+                            icon: "figure.run"
+                        )
+                        StatItem(
+                            title: NSLocalizedString("Pace", comment: "Run pace stat"), 
+                            value: run.averagePace, 
+                            icon: "stopwatch"
+                        )
                         if let terrain = run.terrain {
-                            StatItem(title: "Terrain", value: terrain, icon: "mountain.2")
+                            StatItem(
+                                title: NSLocalizedString("Terrain", comment: "Run terrain stat"), 
+                                value: terrain, 
+                                icon: "mountain.2"
+                            )
                         }
                     }
                 }
@@ -107,7 +119,7 @@ struct RunDetailView: View {
                 
                 // Participants Section
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Participants (\(participants.count)/\(run.maxParticipants))")
+                    Text(NSLocalizedString("Participants", comment: "") + " (\(participants.count)/\(run.maxParticipants))")
                         .font(.title3)
                         .fontWeight(.semibold)
                     
@@ -128,7 +140,7 @@ struct RunDetailView: View {
                 // Pending Requests Section
                 if isCreator && !pendingRequests.isEmpty {
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("Pending Requests (\(pendingRequests.count))")
+                        Text(NSLocalizedString("Pending Requests", comment: "") + " (\(pendingRequests.count))")
                             .font(.title3)
                             .fontWeight(.semibold)
                         
@@ -137,7 +149,7 @@ struct RunDetailView: View {
                                 PendingRequestView(user: requester)
                                 Spacer()
                                 Button(action: { acceptRequest(for: requester) }) {
-                                    Text("Accept")
+                                    Text(NSLocalizedString("Accept", comment: "Accept join request button"))
                                         .fontWeight(.medium)
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 20)
@@ -161,7 +173,9 @@ struct RunDetailView: View {
                         Button(action: {
                             viewModel.requestToJoin(run: run)
                         }) {
-                            Text(viewModel.hasRequestedToJoin[run.id] == true ? "Requested" : "Request Join")
+                            Text(viewModel.hasRequestedToJoin[run.id] == true ? 
+                                NSLocalizedString("Requested", comment: "") : 
+                                NSLocalizedString("Request Join", comment: ""))
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
@@ -175,7 +189,7 @@ struct RunDetailView: View {
                     if isCreator {
                         HStack(spacing: 16) {
                             Button(action: { showingEditSheet = true }) {
-                                Label("Edit Run", systemImage: "pencil")
+                                Label(NSLocalizedString("Edit Run", comment: ""), systemImage: "pencil")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
@@ -184,7 +198,7 @@ struct RunDetailView: View {
                             }
                             
                             Button(action: { showingDeleteAlert = true }) {
-                                Label("Delete", systemImage: "trash")
+                                Label(NSLocalizedString("Delete", comment: ""), systemImage: "trash")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
@@ -195,7 +209,7 @@ struct RunDetailView: View {
                         }
                     } else if isParticipant {
                         Button(action: unjoinRun) {
-                            Text("Leave Run")
+                            Text(NSLocalizedString("Leave Run", comment: ""))
                                 .font(.headline)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
@@ -211,11 +225,11 @@ struct RunDetailView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Delete Run", isPresented: $showingDeleteAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) { deleteRun() }
+        .alert(NSLocalizedString("Delete Run", comment: "Alert title for run deletion"), isPresented: $showingDeleteAlert) {
+            Button(NSLocalizedString("Cancel", comment: ""), role: .cancel) { }
+            Button(NSLocalizedString("Delete", comment: ""), role: .destructive) { deleteRun() }
         } message: {
-            Text("Are you sure you want to delete this run? This action cannot be undone.")
+            Text(NSLocalizedString("Are you sure you want to delete this run? This action cannot be undone.", comment: "Alert message for run deletion confirmation"))
         }
         .sheet(isPresented: $showingEditSheet) {
             EditRunView(run: run)
@@ -231,10 +245,10 @@ struct RunDetailView: View {
     private var menuButton: some View {
         Menu {
             Button(action: { showingEditSheet = true }) {
-                Label("Edit Run", systemImage: "pencil")
+                Label(NSLocalizedString("Edit Run", comment: ""), systemImage: "pencil")
             }
             Button(role: .destructive, action: { showingDeleteAlert = true }) {
-                Label("Delete Run", systemImage: "trash")
+                Label(NSLocalizedString("Delete Run", comment: ""), systemImage: "trash")
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -367,7 +381,7 @@ struct RunDetailView: View {
         ]) { error in
             if let error = error {
                 isLoading = false
-                alertMessage = "Error updating join request status: \(error.localizedDescription)"
+                alertMessage = NSLocalizedString("Error updating join request status: ", comment: "") + error.localizedDescription
                 showingAlert = true
                 return
             }
@@ -378,7 +392,7 @@ struct RunDetailView: View {
             ]) { error in
                 isLoading = false
                 if let error = error {
-                    alertMessage = "Error adding user to participants: \(error.localizedDescription)"
+                    alertMessage = NSLocalizedString("Error adding user to participants: ", comment: "") + error.localizedDescription
                     showingAlert = true
                 } else {
                     // Create notification for the user
@@ -424,7 +438,7 @@ struct RunDetailView: View {
         ]) { error in
             if let error = error {
                 self.isLoading = false
-                self.alertMessage = "Error leaving run: \(error.localizedDescription)"
+                self.alertMessage = NSLocalizedString("Error leaving run: ", comment: "") + error.localizedDescription
                 self.showingAlert = true
                 return
             }
@@ -433,7 +447,7 @@ struct RunDetailView: View {
             joinRequestRef.delete { error in
                 self.isLoading = false
                 if let error = error {
-                    self.alertMessage = "Error removing join request: \(error.localizedDescription)"
+                    self.alertMessage = NSLocalizedString("Error removing join request: ", comment: "") + error.localizedDescription
                     self.showingAlert = true
                 } else {
                     // Navigate back after successfully leaving and deleting the join request
@@ -454,7 +468,7 @@ struct RunDetailView: View {
         db.collection("runs").document(run.id).delete { error in
             isLoading = false
             if let error = error {
-                alertMessage = "Error deleting run: \(error.localizedDescription)"
+                alertMessage = NSLocalizedString("Error deleting run: ", comment: "") + error.localizedDescription
                 showingAlert = true
             } else {
                 // Navigate back after successful deletion
@@ -507,7 +521,7 @@ struct PendingRequestView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(user.userName)
                     .font(.system(size: 16, weight: .medium))
-                Text("Requested \(user.timestamp.timeAgo())")
+                Text(NSLocalizedString("Requested ", comment: "Time indicator prefix") + user.timestamp.timeAgo())
                     .font(.system(size: 14))
                     .foregroundColor(.gray)
             }

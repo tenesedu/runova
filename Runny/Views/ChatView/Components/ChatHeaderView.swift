@@ -36,10 +36,9 @@ struct ChatHeaderView: View {
                             .foregroundColor(.primary)
                         
                         if conversation.type == "group" {
-                            Text(participantsText)
+                            Text(NSLocalizedString("Group", comment: ""))
                                 .font(.caption)
                                 .foregroundColor(.gray)
-                                .lineLimit(1)
                         }
                     }
                 }

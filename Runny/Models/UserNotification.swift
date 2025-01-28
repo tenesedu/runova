@@ -21,15 +21,16 @@ struct UserNotification: Identifiable {
     }
     
     var message: String {
+        let senderPlaceholder = senderName
         switch type {
         case .friendRequest:
-            return "\(senderName) sent you a friend request"
+            return String(format: NSLocalizedString("friendRequest", comment: ""), senderPlaceholder)
         case .friendAccepted:
-            return "\(senderName) accepted your friend request"
+            return String(format: NSLocalizedString("friendAccepted", comment: ""), senderPlaceholder)
         case .joinRequest:
-            return "\(senderName) requested to join your run"
+            return String(format: NSLocalizedString("joinRequest", comment: ""), senderPlaceholder)
         case .joinRequestAccepted:
-            return "\(senderName) accepted your request to join their run"
+            return String(format: NSLocalizedString("joinRequestAccepted", comment: ""), senderPlaceholder)
         }
     }
     

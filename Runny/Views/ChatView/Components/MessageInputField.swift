@@ -7,7 +7,7 @@ struct MessageInputField: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            TextField("Type a message...", text: $text)
+            TextField(NSLocalizedString("Type a message...", comment: ""), text: $text)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .focused($isFocused)
                 .submitLabel(.send)

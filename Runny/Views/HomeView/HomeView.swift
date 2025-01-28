@@ -31,7 +31,7 @@ struct HomeView: View {
             return interests
         }
         return interests.filter { interest in
-            interest.name.localizedCaseInsensitiveContains(searchText)
+            interest.name.localizedCaseInsensitiveContains(searchText.localized)
         }
     }
     
@@ -71,7 +71,7 @@ struct HomeView: View {
                 VStack(spacing: 24) {
                     // Greeting Text
                     HStack {
-                        Text("Hello".localized + ",")
+                        Text(NSLocalizedString("Hello", comment: "") + ",")
                             .font(.title2)
                         
                         Text(userName)
@@ -86,7 +86,7 @@ struct HomeView: View {
                     HStack {
                         Image(systemName: "magnifyingglass")
                             .foregroundColor(.gray)
-                        TextField("Explore...", text: $searchText)
+                        TextField(NSLocalizedString("Explore...", comment: ""), text: $searchText)
                             .textFieldStyle(PlainTextFieldStyle())
                         
                         if !searchText.isEmpty {
@@ -114,7 +114,7 @@ struct HomeView: View {
                         // Create Run Button
                         NavigationLink(destination: CreateRunView().navigationBarBackButtonHidden(true)) {
                             ActionButton(
-                                title: "Create Run".localized,
+                                title: NSLocalizedString("Create Run", comment: ""),
                                 icon: "plus.circle.fill",
                                 backgroundColor: .black
                             )
@@ -123,7 +123,7 @@ struct HomeView: View {
                         // Join Run Button
                         NavigationLink(destination: RunsView().navigationBarBackButtonHidden(true)) {
                             ActionButton(
-                                title: "Join Run".localized,
+                                title: NSLocalizedString("Join Run", comment: ""),
                                 icon: "person.2.fill",
                                 backgroundColor: .white,
                                 isOutlined: true
@@ -135,7 +135,7 @@ struct HomeView: View {
                     // Updated Runners Section
                     VStack(alignment: .leading) {
                         HStack {
-                            Text("Runners Near You".localized)
+                            Text(NSLocalizedString("Runners Nearby", comment: ""))
                                 .font(.title3)
                                 .fontWeight(.semibold)
                             
@@ -144,7 +144,7 @@ struct HomeView: View {
                             Button(action: {
                                 showingAllRunners = true
                             }) {
-                                Text("See All")
+                                Text(NSLocalizedString("See All", comment: ""))
                                     .foregroundColor(.blue)
                                     .font(.system(size: 16, weight: .medium))
                             }
@@ -602,7 +602,7 @@ struct AllRunnersView: View {
             }
             .padding()
         }
-        .navigationTitle("All Runners")
+        .navigationTitle(NSLocalizedString("All Runners", comment: ""))
         .navigationBarItems(trailing: Button("Done") {
             dismiss()
         })

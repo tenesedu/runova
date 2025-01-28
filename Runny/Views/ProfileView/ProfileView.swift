@@ -14,7 +14,6 @@ struct ProfileView: View {
     @State private var goals: [String] = []
     @State private var interests: [String] = []
     @State private var isEditing = false
-    @AppStorage("selectedLanguage") private var selectedLanguage = "en"
     var userId: String? = nil // nil means current user
     
     var body: some View {
@@ -55,20 +54,20 @@ struct ProfileView: View {
                 // User Info Section
                 VStack(spacing: 20) {
                     
-                    infoCard(title: "Personal Information") {
-                        InfoRow(icon: "person.fill", title: "Gender", value: gender)
-                        InfoRow(icon: "mappin.circle.fill", title: "City", value: city)
-                        InfoRow(icon: "calendar", title: "Age", value: age)
-                        InfoRow(icon: "clock", title: "Average Pace", value: averagePace)
+                    infoCard(title: NSLocalizedString("Personal Information", comment: "")) {
+                        InfoRow(icon: "person.fill", title: NSLocalizedString("Gender", comment: ""), value: gender)
+                        InfoRow(icon: "mappin.circle.fill", title: NSLocalizedString("City", comment: ""), value: city)
+                        InfoRow(icon: "calendar", title: NSLocalizedString("Age", comment: ""), value: age)
+                        InfoRow(icon: "clock", title: NSLocalizedString("Average Pace", comment: ""), value: averagePace)
                     }
                     
-                    infoCard(title: "Goals") {
+                    infoCard(title: NSLocalizedString("Goals", comment: "")) {
                         ForEach(goals, id: \.self) { goal in
                             InfoRow(icon: "target", title: "", value: goal)
                         }
                     }
                     
-                    infoCard(title: "Interests") {
+                    infoCard(title: NSLocalizedString("Interests", comment: "")) {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 10) {
                             ForEach(interests, id: \.self) { interest in
                                 Text(interest)
@@ -85,30 +84,6 @@ struct ProfileView: View {
                 .padding(.horizontal)
                 
                 
-                // Language Selection Section
-                Section(header: Text("Language".localized)) {
-                    HStack(spacing: 20) {
-                        // English Flag Button
-                        LanguageButton(
-                            flag: "🇺🇸",
-                            language: "English",
-                            isSelected: selectedLanguage == "en"
-                        ) {
-                            selectedLanguage = "en"
-                        }
-                        
-                        // Spanish Flag Button
-                        LanguageButton(
-                            flag: "🇪🇸",
-                            language: "Español",
-                            isSelected: selectedLanguage == "es"
-                        ) {
-                            selectedLanguage = "es"
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                
                 VStack {
                     Spacer() // This will push the settings button to the bottom
                     
@@ -118,7 +93,7 @@ struct ProfileView: View {
                                 .font(.system(size: 22))
                                 .foregroundColor(.gray)
                             
-                            Text("Settings")
+                            Text(NSLocalizedString("Settings", comment: ""))
                                 .font(.system(size: 17, weight: .medium))
                                 .foregroundColor(.primary)
                             
@@ -138,7 +113,7 @@ struct ProfileView: View {
                 }
             }
         }
-        .navigationTitle("Profile".localized)
+        .navigationTitle(NSLocalizedString("Profile", comment: ""))
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         
@@ -148,7 +123,7 @@ struct ProfileView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))
-                        Text("Home")
+                        Text(NSLocalizedString("Home", comment: ""))
                             .font(.system(size: 16, weight: .regular))
                     }
                     .foregroundColor(.blue)

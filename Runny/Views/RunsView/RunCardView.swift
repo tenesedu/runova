@@ -54,7 +54,7 @@ struct RunCardView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(creatorName)
                             .font(.system(size: 16, weight: .medium))
-                        Text("Organizer")
+                        Text(NSLocalizedString("Organizer", comment: ""))
                             .font(.system(size: 12))
                             .foregroundColor(.gray)
                     }
@@ -142,7 +142,7 @@ struct RunCardView: View {
                         // Show organizer badge instead of join button
                         HStack {
                             Spacer()
-                            Text("You're the organizer")
+                            Text(NSLocalizedString("You're the organizer", comment: ""))
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 12)
