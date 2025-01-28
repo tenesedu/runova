@@ -20,6 +20,21 @@ struct RunCardView: View {
         return run.createdBy == currentUserId
     }
     
+    private var isParticipant: Bool {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return false }
+        return run.currentParticipants.contains(currentUserId)
+    }
+    
+    private var buttonState: (text: String, isDisabled: Bool) {
+        if isParticipant {
+            return ("You're a Participant", true)
+        } else if viewModel.hasRequestedToJoin[run.id] == true {
+            return ("Request Pending", true)
+        } else {
+            return ("Request Join", false)
+        }
+    }
+    
     var body: some View {
         NavigationLink(destination: RunDetailView(run: run, viewModel: viewModel)) {
             VStack(alignment: .leading, spacing: 16) {
@@ -142,17 +157,17 @@ struct RunCardView: View {
                         Button(action: {
                             viewModel.requestToJoin(run: run)
                         }) {
-                            Text(viewModel.hasRequestedToJoin[run.id] == true ? "Requested" : "Request Join")
+                            Text(buttonState.text)
                                 .font(.system(size: 16, weight: .semibold))
                                 .frame(maxWidth: .infinity)
                                 .foregroundColor(.white)
                                 .padding()
                                 .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(viewModel.hasRequestedToJoin[run.id] == true ? Color.gray : Color.blue)
+                                    buttonState.isDisabled ? Color.gray : Color.blue
                                 )
+                                .cornerRadius(10)
                         }
-                        .disabled(viewModel.hasRequestedToJoin[run.id] == true)
+                        .disabled(buttonState.isDisabled)
                     }
                 } else {
                     // Show status indicator for non-pending runs
@@ -182,8 +197,11 @@ struct RunCardView: View {
         .buttonStyle(PlainButtonStyle())
         .onAppear {
             fetchCreatorInfo()
-            
             fetchParticipants()
+            viewModel.checkJoinRequestStatus(for: run)
+        }
+        .onDisappear {
+            viewModel.stopListening(for: run.id)
         }
     }
     

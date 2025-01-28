@@ -25,6 +25,7 @@ struct JoinRequest: Identifiable {
     
     func toDictionary() -> [String: Any] {
         return [
+            "id": id,
             "status": status,
             "userId": userId,
             "userName": userName,

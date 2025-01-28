@@ -32,90 +32,105 @@ struct RunDetailView: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Creator Info
-                HStack {
-                    AsyncImage(url: URL(string: creatorProfileUrl)) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Circle()
-                            .fill(Color.gray.opacity(0.3))
+            VStack(alignment: .leading, spacing: 24) {
+                // Creator Info Card
+                VStack(spacing: 16) {
+                    HStack(spacing: 16) {
+                        AsyncImage(url: URL(string: creatorProfileUrl)) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Circle()
+                                .fill(Color.gray.opacity(0.3))
+                        }
+                        .frame(width: 60, height: 60)
+                        .clipShape(Circle())
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(creatorName)
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            Text("Organizer")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                        Spacer()
                     }
-                    .frame(width: 50, height: 50)
-                    .clipShape(Circle())
                     
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(creatorName)
-                            .font(.system(size: 18, weight: .semibold))
-                        Text("Organizer")
-                            .font(.system(size: 14))
-                            .foregroundColor(.gray)
+                    // Run Title and Description
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(run.name)
+                            .font(.title)
+                            .fontWeight(.bold)
+                        
+                        if !run.description.isEmpty {
+                            Text(run.description)
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
-                    Spacer()
                 }
-                .padding(.horizontal)
+                .padding()
+                .background(Color.white)
+                .cornerRadius(16)
+                .shadow(color: .black.opacity(0.05), radius: 10)
                 
-                // Run Details
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(run.name)
-                        .font(.system(size: 24, weight: .bold))
-                    
-                    if !run.description.isEmpty {
-                        Text(run.description)
-                            .font(.system(size: 16))
-                            .foregroundColor(.gray)
-                    }
-                    
+                // Details Card
+                VStack(spacing: 20) {
                     // Location and Time
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Image(systemName: "location.fill")
-                            Text(run.location)
-                        }
-                        HStack {
-                            Image(systemName: "calendar")
-                            Text(formatDateTime(run.time))
-                        }
+                    VStack(alignment: .leading, spacing: 16) {
+                        DetailRow(icon: "location.fill", text: run.location)
+                        DetailRow(icon: "calendar", text: formatDateTime(run.time))
                     }
-                    .foregroundColor(.gray)
                     
-                    // Stats Card
-                    HStack(spacing: 30) {
+                    Divider()
+                    
+                    // Stats Grid
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 20) {
                         StatItem(title: "Distance", value: "\(String(format: "%.1f", run.distance))km", icon: "figure.run")
                         StatItem(title: "Pace", value: run.averagePace, icon: "stopwatch")
                         if let terrain = run.terrain {
                             StatItem(title: "Terrain", value: terrain, icon: "mountain.2")
                         }
                     }
-                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(12)
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
                 }
-                .padding(.horizontal)
+                .padding()
+                .background(Color.white)
+                .cornerRadius(16)
+                .shadow(color: .black.opacity(0.05), radius: 10)
                 
                 // Participants Section
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 16) {
                     Text("Participants (\(participants.count)/\(run.maxParticipants))")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.title3)
+                        .fontWeight(.semibold)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
+                        HStack(spacing: 16) {
                             ForEach(participants) { participant in
                                 ParticipantView(user: participant)
                             }
                         }
+                        .padding(.horizontal, 4)
                     }
                 }
-                .padding(.horizontal)
+                .padding()
+                .background(Color.white)
+                .cornerRadius(16)
+                .shadow(color: .black.opacity(0.05), radius: 10)
                 
-                // Pending Requests Section (Only visible to creator)
+                // Pending Requests Section
                 if isCreator && !pendingRequests.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 16) {
                         Text("Pending Requests (\(pendingRequests.count))")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.title3)
+                            .fontWeight(.semibold)
                         
                         ForEach(pendingRequests) { requester in
                             HStack {
@@ -123,73 +138,78 @@ struct RunDetailView: View {
                                 Spacer()
                                 Button(action: { acceptRequest(for: requester) }) {
                                     Text("Accept")
+                                        .fontWeight(.medium)
                                         .foregroundColor(.white)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(Color.black)
-                                        .cornerRadius(8)
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 10)
+                                        .background(Color.blue)
+                                        .cornerRadius(10)
                                 }
                             }
-                            .padding(.horizontal)
+                            Divider()
                         }
                     }
-                    .padding(.horizontal)
-                }
-                
-                // Join Button (if not creator and not full)
-                if !isCreator && !isParticipant && !run.isFull {
-                    Button(action: {
-                        viewModel.requestToJoin(run: run)
-                    }) {
-                        Text(viewModel.hasRequestedToJoin[run.id] == true ? "Requested" : "Request Join")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(viewModel.hasRequestedToJoin[run.id] == true ? Color.gray : Color.black)
-                            .cornerRadius(12)
-                    }
-                    .disabled(viewModel.hasRequestedToJoin[run.id] == true)
                     .padding()
+                    .background(Color.white)
+                    .cornerRadius(16)
+                    .shadow(color: .black.opacity(0.05), radius: 10)
                 }
                 
+                // Action Buttons
                 VStack(spacing: 12) {
+                    if !isCreator && !isParticipant && !run.isFull {
+                        Button(action: {
+                            viewModel.requestToJoin(run: run)
+                        }) {
+                            Text(viewModel.hasRequestedToJoin[run.id] == true ? "Requested" : "Request Join")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(viewModel.hasRequestedToJoin[run.id] == true ? Color.gray : Color.blue)
+                                .cornerRadius(12)
+                        }
+                        .disabled(viewModel.hasRequestedToJoin[run.id] == true)
+                    }
+                    
                     if isCreator {
-                        // Creator Actions
                         HStack(spacing: 16) {
                             Button(action: { showingEditSheet = true }) {
                                 Label("Edit Run", systemImage: "pencil")
+                                    .font(.headline)
                                     .frame(maxWidth: .infinity)
-                                    .padding()
+                                    .padding(.vertical, 16)
                                     .background(Color.gray.opacity(0.1))
                                     .cornerRadius(12)
                             }
                             
                             Button(action: { showingDeleteAlert = true }) {
                                 Label("Delete", systemImage: "trash")
+                                    .font(.headline)
                                     .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.red.opacity(0.1))
+                                    .padding(.vertical, 16)
                                     .foregroundColor(.red)
+                                    .background(Color.red.opacity(0.1))
                                     .cornerRadius(12)
                             }
                         }
-                        .padding(.horizontal)
                     } else if isParticipant {
-                        // Participant Actions
                         Button(action: unjoinRun) {
                             Text("Leave Run")
+                                .font(.headline)
                                 .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.red.opacity(0.1))
+                                .padding(.vertical, 16)
                                 .foregroundColor(.red)
+                                .background(Color.red.opacity(0.1))
                                 .cornerRadius(12)
                         }
-                        .padding(.horizontal)
                     }
                 }
+                .padding()
             }
+            .padding()
         }
+        .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.inline)
         .alert("Delete Run", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
@@ -309,8 +329,8 @@ struct RunDetailView: View {
                 let data = document.data()
              
                 let userId = data["userId"] as? String ?? ""
-                let userName = data["senderName"] as? String ?? ""
-                let userImage = data["senderImage"] as? String ?? ""
+                let userName = data["userName"] as? String ?? ""
+                let userImage = data["userImage"] as? String ?? ""
                 let status = data["status"] as? String ?? "pending"
                 let timestamp = (data["timestamp"] as? Timestamp)?.dateValue() ?? Date()
 
@@ -395,20 +415,34 @@ struct RunDetailView: View {
         
         isLoading = true
         let db = Firestore.firestore()
+        let runRef = db.collection("runs").document(run.id)
+        let joinRequestRef = runRef.collection("joinRequests").document(userId)
         
-        db.collection("runs").document(run.id).updateData([
+        // Remove the user from the participants array
+        runRef.updateData([
             "currentParticipants": FieldValue.arrayRemove([userId])
         ]) { error in
-            isLoading = false
             if let error = error {
-                alertMessage = "Error leaving run: \(error.localizedDescription)"
-                showingAlert = true
-            } else {
-                // Navigate back after successfully leaving
-                presentationMode.wrappedValue.dismiss()
+                self.isLoading = false
+                self.alertMessage = "Error leaving run: \(error.localizedDescription)"
+                self.showingAlert = true
+                return
+            }
+            
+            // Delete the user's join request
+            joinRequestRef.delete { error in
+                self.isLoading = false
+                if let error = error {
+                    self.alertMessage = "Error removing join request: \(error.localizedDescription)"
+                    self.showingAlert = true
+                } else {
+                    // Navigate back after successfully leaving and deleting the join request
+                    self.presentationMode.wrappedValue.dismiss()
+                }
             }
         }
     }
+
     
     private func deleteRun() {
         guard isCreator else { return }
@@ -498,6 +532,22 @@ struct StatItem: View {
             Text(title)
                 .font(.system(size: 12))
                 .foregroundColor(.gray)
+        }
+    }
+}
+
+// Add this helper view for consistent detail rows
+struct DetailRow: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundColor(.gray)
+                .frame(width: 24)
+            Text(text)
+                .font(.body)
         }
     }
 }
