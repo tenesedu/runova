@@ -15,6 +15,11 @@ struct HomeView: View {
     @State private var showingNotifications = false
     @StateObject private var locationManager = LocationManager()
     @StateObject private var notificationManager = NotificationManager()
+    @State private var isSearchActive = false
+    @State private var followedInterests: [Interest] = []
+    
+    // CreateRun variable
+    @State private var selectedSegment = 2
     
     var filteredRunners: [Runner] {
         if searchText.isEmpty {
@@ -82,37 +87,34 @@ struct HomeView: View {
                     .padding(.horizontal)
                     .padding(.top)
                     
-                    // Updated Search Bar
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray)
-                        TextField(NSLocalizedString("Explore...", comment: ""), text: $searchText)
-                            .textFieldStyle(PlainTextFieldStyle())
-                        
-                        if !searchText.isEmpty {
-                            Button(action: {
-                                searchText = ""
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.gray)
-                            }
+                    // Search Bar Button
+                    Button(action: { isSearchActive = true }) {
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.gray)
+                            Text(NSLocalizedString("Search runners, communities...", comment: ""))
+                                .foregroundColor(.gray)
+                            Spacer()
                         }
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.white)
+                                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                        )
                     }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.white)
-                            .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-                    )
                     .padding(.horizontal)
                     
                     // Updated Interests Section
-                    InterestCarousel(interests: filteredInterests)
+                    InterestsTabView(
+                        interests: $interests,
+                        followedInterests: $followedInterests
+                    )
                     
                     // Action Buttons
                     HStack(spacing: 16) {
                         // Create Run Button
-                        NavigationLink(destination: CreateRunView().navigationBarBackButtonHidden(true)) {
+                        NavigationLink(destination: CreateRunView(selectedSegment: $selectedSegment).navigationBarBackButtonHidden(true)) {
                             ActionButton(
                                 title: NSLocalizedString("Create Run", comment: ""),
                                 icon: "plus.circle.fill",
@@ -218,6 +220,9 @@ struct HomeView: View {
             .sheet(isPresented: $showingNotifications) {
                 NotificationsView()
             }
+            .sheet(isPresented: $isSearchActive) {
+                SearchView()
+            }
             .onAppear {
                 locationManager.requestLocation()
                 Task {
@@ -250,17 +255,18 @@ struct HomeView: View {
     }
     
     private func fetchInterests() async {
-        print("🔍 Fetching interests...")
         let db = Firestore.firestore()
         
         do {
             let querySnapshot = try await db.collection("interests").order(by: "name").getDocuments()
-            self.interests = querySnapshot.documents.map { document in
-                let interest = Interest(id: document.documentID, data: document.data())
-                print("🏷 Interest: \(interest.name), Icon: \(interest.iconName)")
-                return interest
+            await MainActor.run {
+                self.interests = querySnapshot.documents.map { document in
+                    let interest = Interest(id: document.documentID, data: document.data())
+                    print("Fetched interest: \(interest.name)")
+                    return interest
+                }
+                print("✅ Interests loaded: \(self.interests.count)")
             }
-            print("✅ Interests loaded: \(self.interests.count)")
         } catch {
             print("❌ Error fetching interests: \(error.localizedDescription)")
         }
@@ -352,134 +358,6 @@ struct HomeView: View {
     }
 }
 
-struct RunnerCard: View {
-    let runner: Runner
-    @State private var profileImage: UIImage?
-    @State private var showingDetail = false
-    @Environment(\.colorScheme) var colorScheme
-    
-    var body: some View {
-        Button(action: {
-            showingDetail = true
-        }) {
-            VStack(alignment: .leading, spacing: 0) {
-                // Profile Image Section
-                ZStack(alignment: .bottomLeading) {
-                    if let image = profileImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(height: 120)
-                            .clipped()
-                    } else {
-                        Rectangle()
-                            .fill(LinearGradient(
-                                colors: [.blue.opacity(0.3), .purple.opacity(0.3)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            .frame(height: 100)
-                            .overlay(
-                                Image(systemName: "person.crop.circle.fill")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 50)
-                                    .foregroundColor(.white.opacity(0.8))
-                            )
-                    }
-                    
-                    // Gradient Overlay
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            .clear,
-                            .black.opacity(0.3)
-                        ]),
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                }
-                
-                // Runner Info Section
-                VStack(alignment: .leading, spacing: 12) {
-                    // Name and Age
-                    HStack {
-                        Text(runner.name)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                        
-                        Spacer()
-                        
-                        Text("\(runner.age)")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                    }
-                    
-                    // Location and Stats
-                    VStack(spacing: 8) {
-                        // Location
-                        HStack {
-                            Image(systemName: "mappin.circle.fill")
-                                .foregroundColor(.red)
-                            Text(runner.city)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        
-                        // Pace
-                        HStack {
-                            Image(systemName: "speedometer")
-                                .foregroundColor(.blue)
-                            Text("\(runner.averagePace) min/km")
-                                .font(.subheadline)
-                                .foregroundColor(.blue)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .padding()
-                .background(colorScheme == .dark ? Color(.systemGray6) : .white)
-            }
-            .frame(width: 160)
-            .background(colorScheme == .dark ? Color(.systemGray6) : .white)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.gray.opacity(0.1), lineWidth: 1)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-        .sheet(isPresented: $showingDetail) {
-            NavigationView {
-                RunnerDetailView(runner: runner)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showingDetail = false
-                            }
-                        }
-                    }
-            }
-        }
-        .onAppear {
-            if !runner.profileImageUrl.isEmpty {
-                loadProfileImage()
-            }
-        }
-    }
-    
-    private func loadProfileImage() {
-        guard let url = URL(string: runner.profileImageUrl) else { return }
-        
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let data = data, let image = UIImage(data: data) {
-                DispatchQueue.main.async {
-                    self.profileImage = image
-                }
-            }
-        }.resume()
-    }
-}
 
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
@@ -487,124 +365,3 @@ struct HomeView_Previews: PreviewProvider {
     }
 }
 
-struct ActionButton: View {
-    let title: String
-    let icon: String
-    let backgroundColor: Color
-    var isOutlined: Bool = false
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(isOutlined ? .black : .white)
-            Text(title)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(isOutlined ? .black : .white)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 50)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isOutlined ? backgroundColor : backgroundColor)
-        )
-        
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.1),
-                radius: 8,
-                x: 0,
-                y: 4)
-    }
-}
-
-struct AllRunnersView: View {
-    let runners: [Runner]
-    let users: [UserApp]
-    let locationManager: LocationManager
-
-    @Environment(\.dismiss) private var dismiss
-
-    var sortedRunners: [Runner] {
-        guard let currentLocation = locationManager.location else { return runners }
-        
-        return users
-            .filter { user in
-                user.id != Auth.auth().currentUser?.uid
-            }
-            .sorted { user1, user2 in
-                guard let location1 = user1.locationAsCLLocation(),
-                      let location2 = user2.locationAsCLLocation() else {
-                    return false
-                }
-                let distance1 = currentLocation.distance(from: location1)
-                let distance2 = currentLocation.distance(from: location2)
-                return distance1 < distance2
-            }
-            .map { Runner(user: $0) }
-    }
-    
-    var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 16) {
-                ForEach(sortedRunners) { runner in
-                    NavigationLink(destination: RunnerDetailView(runner: runner)) {
-                        HStack(spacing: 16) {
-                            // Add ZStack to overlay active status on profile image
-                            ZStack(alignment: .topTrailing) {
-                                AsyncImage(url: URL(string: runner.profileImageUrl)) { image in
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                } placeholder: {
-                                    Color.gray.opacity(0.3)
-                                }
-                                .frame(width: 60, height: 60)
-                                .clipShape(Circle())
-                                
-                                // Active status indicator
-                                Circle()
-                                    .fill(runner.isActive ? Color.green : Color.gray)
-                                    .frame(width: 12, height: 12)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.white, lineWidth: 2)
-                                    )
-                                    .offset(x: 3, y: -3)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(runner.name)
-                                    .font(.headline)
-                                
-                                if let userLocation = users.first(where: { $0.id == runner.id })?.locationAsCLLocation(),
-                                   let currentLocation = locationManager.location {
-                                    Text(String(format: "%.1f km away", currentLocation.distance(from: userLocation) / 1000))
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                }
-                                
-                                Text(runner.city)
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                            }
-                            
-                            Spacer()
-                            
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
-                        }
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-                    }
-                }
-            }
-            .padding()
-        }
-        .navigationTitle(NSLocalizedString("All Runners", comment: ""))
-        .navigationBarItems(trailing: Button("Done") {
-            dismiss()
-        })
-    }
-}

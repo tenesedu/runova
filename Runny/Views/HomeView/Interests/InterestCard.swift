@@ -1,23 +1,6 @@
 import SwiftUI
-import FirebaseFirestore
 import FirebaseAuth
-
-struct InterestCarousel: View {
-    let interests: [Interest]
-    
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: 15) {
-                ForEach(interests) { interest in
-                    InterestCard(interest: interest)
-                        .frame(width: 280)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 5)
-        }
-    }
-}
+import FirebaseFirestore
 
 struct InterestCard: View {
     let interest: Interest

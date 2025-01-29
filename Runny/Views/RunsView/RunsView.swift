@@ -7,6 +7,7 @@ struct RunsView: View {
     @StateObject private var vm = RunsViewModel()
     @StateObject private var runViewModel = RunViewModel()
     
+    
     var filteredAllRuns: [Run] {
         if vm.searchText.isEmpty {
             return vm.allRuns
@@ -138,8 +139,10 @@ struct RunsView: View {
                     }
                 }
             }
-            .sheet(isPresented: $vm.showingCreateRun) {
-                CreateRunView()
+            .sheet(isPresented: $vm.showingCreateRun, onDismiss: {
+                vm.selectedSegment = 2
+            }) {
+                CreateRunView(selectedSegment: $vm.selectedSegment)
             }
             .onAppear {
                 vm.fetchRuns()

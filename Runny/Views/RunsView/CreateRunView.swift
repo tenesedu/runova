@@ -18,6 +18,8 @@ struct CreateRunView: View {
     @State private var status: String = "pending"
     @State private var organizerId: String = ""
     
+    @Binding var selectedSegment: Int
+    
     let terrainTypes = ["Road", "Trail", "Track", "Mixed", "Beach", "Mountain"]
     let participantsRange = Array(2...50)
     let minutesRange = Array(3...15)
@@ -163,6 +165,7 @@ var body: some View {
             // Add the "Cancelar" button
             ToolbarItem(placement: .navigationBarLeading) {
                 Button("Cancel") {
+                    selectedSegment = 2
                     dismiss()
                 }
                 .foregroundColor(.black)
