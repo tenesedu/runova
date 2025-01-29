@@ -8,7 +8,7 @@ struct ConnectionsView: View {
     @State private var friends: [Runner] = []
     @StateObject private var connectionManager = ConnectionManager()
     
-    init(selectedTab: Int = 0){
+    init(selectedTab: Int = 0) {
         _selectedTab = State(initialValue: selectedTab)
     }
     
@@ -24,58 +24,65 @@ struct ConnectionsView: View {
             
             if selectedTab == 0 {
                 // Friends List
-                if friends.isEmpty {
-                    EmptyStateView(
-                        message: "No Friends Yet",
-                        systemImage: "person.2",
-                        description: "Connect with other runners to see them here!"
-                    )
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            ForEach(friends) { friend in
-                                NavigationLink(destination: RunnerDetailView(runner: friend)) {
-                                    FriendRow(friend: friend)
+                ScrollView {
+                    VStack(spacing: 16) {
+                        if friends.isEmpty {
+                            EmptyStateView(
+                                message: "No Friends Yet",
+                                systemImage: "person.2",
+                                description: "Connect with other runners to see them here!"
+                            )
+                        } else {
+                            LazyVStack(spacing: 12) {
+                                ForEach(friends) { friend in
+                                    NavigationLink(destination: RunnerDetailView(runner: friend)) {
+                                        FriendRow(friend: friend)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
                                 }
-                                .buttonStyle(PlainButtonStyle())
                             }
+                            .padding(.vertical)
                         }
-                        .padding()
                     }
+                    .padding(.vertical)
                 }
             } else {
                 // Requests List
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 16) {
-                        if !connectionManager.receivedRequests.isEmpty {
-                            Text("Received Requests")
-                                .font(.headline)
-                                .padding(.horizontal)
-                            
-                            ForEach(connectionManager.receivedRequests) { request in
-                                PendingRequestRow(request: request)
-                                    .padding(.horizontal)
-                            }
-                        }
-                        
-                        if !connectionManager.sentRequests.isEmpty {
-                            Text("Sent Requests")
-                                .font(.headline)
-                                .padding(.horizontal)
-                                .padding(.top, 16)
-                            
-                            ForEach(connectionManager.sentRequests) { request in
-                                SentRequestRow(request: request)
-                                    .padding(.horizontal)
-                            }
-                        }
-                        
+                    VStack(spacing: 16) {
                         if connectionManager.receivedRequests.isEmpty && connectionManager.sentRequests.isEmpty {
                             EmptyStateView(
                                 message: "No Pending Requests",
                                 systemImage: "person.badge.plus",
                                 description: "You don't have any connection requests at the moment."
                             )
+                        } else {
+                            if !connectionManager.receivedRequests.isEmpty {
+                                Text("Received Requests")
+                                    .font(.headline)
+                                    .padding(.horizontal)
+                                
+                                LazyVStack(alignment: .leading, spacing: 16) {
+                                    ForEach(connectionManager.receivedRequests) { request in
+                                        PendingRequestRow(request: request)
+                                            .padding(.horizontal)
+                                    }
+                                }
+                            }
+                            
+                            if !connectionManager.sentRequests.isEmpty {
+                                Text("Sent Requests")
+                                    .font(.headline)
+                                    .padding(.horizontal)
+                                    .padding(.top, 16)
+                                
+                                LazyVStack(alignment: .leading, spacing: 16) {
+                                    ForEach(connectionManager.sentRequests) { request in
+                                        SentRequestRow(request: request)
+                                            .padding(.horizontal)
+                                    }
+                                }
+                            }
                         }
                     }
                     .padding(.vertical)
@@ -88,6 +95,7 @@ struct ConnectionsView: View {
             connectionManager.fetchAllRequests()
         }
     }
+
     
     private func fetchFriends() {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
@@ -152,4 +160,5 @@ struct FriendRow: View {
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
-} 
+}
+

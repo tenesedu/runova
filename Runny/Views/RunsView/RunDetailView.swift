@@ -478,30 +478,6 @@ struct RunDetailView: View {
     }
 }
 
-struct ParticipantView: View {
-    let user: UserApp
-    
-    var body: some View {
-        VStack {
-            AsyncImage(url: URL(string: user.profileImageUrl)) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Circle()
-                    .fill(Color.gray.opacity(0.3))
-            }
-            .frame(width: 50, height: 50)
-            .clipShape(Circle())
-            
-            Text(user.name)
-                .font(.system(size: 12))
-                .lineLimit(1)
-        }
-        .frame(width: 60)
-    }
-}
-
 struct PendingRequestView: View {
     let user: JoinRequest
     
