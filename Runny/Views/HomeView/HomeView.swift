@@ -265,6 +265,7 @@ struct HomeView: View {
                     print("Fetched interest: \(interest.name)")
                     return interest
                 }
+                self.interests.shuffle()
                 print("✅ Interests loaded: \(self.interests.count)")
             }
         } catch {

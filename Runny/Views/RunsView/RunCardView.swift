@@ -28,7 +28,10 @@ struct RunCardView: View {
     private var buttonState: (text: String, isDisabled: Bool) {
         if isParticipant {
             return ("You're a Participant", true)
-        } else if viewModel.hasRequestedToJoin[run.id] == true {
+        } else if run.isFull && !isParticipant {
+            return ("Run Full", true)
+
+        }else if viewModel.hasRequestedToJoin[run.id] == true {
             return ("Request Pending", true)
         } else {
             return ("Request Join", false)

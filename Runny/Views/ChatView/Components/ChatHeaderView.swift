@@ -55,22 +55,22 @@ struct ChatHeaderView: View {
             }
         }
         .background(
-            NavigationLink(
-                destination: Group {
+            NavigationStack {
+                EmptyView() 
+
+                .navigationDestination(isPresented: $showingProfile) {
                     if conversation.type == "direct",
                        let otherUser = conversation.otherUserProfile {
-                        if let runner = participants.first(where: {$0.id == otherUser.id}){
+                        if let runner = participants.first(where: { $0.id == otherUser.id }) {
                             RunnerDetailView(runner: runner)
-                        }else{
+                        } else {
                             Text("User not found")
                         }
-                       
                     }
-                },
-                isActive: $showingProfile,
-                label: { EmptyView() }
-            )
+                }
+            }
         )
+
     }
     
     private var headerTitle: String {

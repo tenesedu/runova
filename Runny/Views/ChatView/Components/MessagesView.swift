@@ -28,7 +28,7 @@ struct MessagesView: View {
                 }
                 .padding()
             }
-            .onChange(of: messages.count) { [oldCount = messages.count] newCount in
+            .onChange(of: messages.count) { oldCount, newCount in
                 if newCount > oldCount {
                     withAnimation {
                         if let lastId = messages.last?.id {
