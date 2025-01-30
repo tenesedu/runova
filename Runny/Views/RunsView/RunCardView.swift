@@ -27,14 +27,14 @@ struct RunCardView: View {
     
     private var buttonState: (text: String, isDisabled: Bool) {
         if isParticipant {
-            return ("You're a Participant", true)
+            return (NSLocalizedString("You're a Participant", comment: ""), true)
         } else if run.isFull && !isParticipant {
-            return ("Run Full", true)
+            return (NSLocalizedString("Full Run", comment: ""), true)
 
         }else if viewModel.hasRequestedToJoin[run.id] == true {
-            return ("Request Pending", true)
+            return (NSLocalizedString("Request Pending", comment: ""), true)
         } else {
-            return ("Request Join", false)
+            return (NSLocalizedString("Request Join", comment: ""), false)
         }
     }
     
@@ -176,7 +176,7 @@ struct RunCardView: View {
                     // Show status indicator for non-pending runs
                     HStack {
                         Spacer()
-                        Text(run.status.rawValue.capitalized)
+                        Text(run.status.localizedStatus)
                             .font(.system(size: 14, weight: .medium))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)

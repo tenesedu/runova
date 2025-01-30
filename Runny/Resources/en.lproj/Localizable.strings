@@ -18,11 +18,12 @@
 
 
 // Interest Related
-"followers" = "seguidores";
-"Following" = "Siguiendo";
-"Follow" = "Seguir";
+"followers" = "followers";
+"Following" = "Following";
+"Follow" = "Follow";
 "Popular Interests" = "Popular Interests";
 "See All" = "See All";
+"Discover" = "Discover";
 
 // Feed View
 "Feed" = "Actividad";
@@ -169,4 +170,20 @@
 "Request accepted" = "Request accepted";
 "Request declined" = "Request declined";
 "You are now friends with" = "You are now friends with";
-"Friend request declined" = "Friend request declined"; 
+"Friend request declined" = "Friend request declined";
+
+// Search
+"Search runners, runs or communities..." = "Search runners, runs or communities...";
+"Search..." = "Search...";
+"Search" = "Search";
+"All" = "All";
+"Runners" = "Runners";
+"Runs" = "Runs";
+"Communities" = "Communities";
+"No results found" = "No results found";
+"Try a different search term" = "Try a different search term";
+
+// New strings
+"No followed interests yet" = "No followed interests yet";
+"FULL" = "FULL";
+"Run is Full" = "Run is Full"; 

@@ -75,7 +75,7 @@ struct RunnerDetailView: View {
                     Button(action: startChat) {
                         HStack {
                             Image(systemName: "message.fill")
-                            Text("Message")
+                            Text(NSLocalizedString("Message", comment: ""))
                         }
                         .foregroundColor(.black)
                         .padding()
@@ -90,19 +90,19 @@ struct RunnerDetailView: View {
                 .padding(.horizontal)
                 // Runner Info Section
                 VStack(spacing: 20) {
-                    infoCard(title: "Personal Information") {
-                        InfoRow(icon: "person.fill", title: "Gender", value: runner.gender)
-                        InfoRow(icon: "mappin.circle.fill", title: "City", value: runner.city)
-                        InfoRow(icon: "calendar", title: "Age", value: "\(runner.age)")
-                        InfoRow(icon: "clock", title: "Average Pace", value: "\(runner.averagePace)")
+                    infoCard(title: NSLocalizedString("Personal Information", comment: "")) {
+                        InfoRow(icon: "person.fill", title: NSLocalizedString("Gender", comment: ""), value: runner.gender)
+                        InfoRow(icon: "mappin.circle.fill", title: NSLocalizedString("City", comment: ""), value: runner.city)
+                        InfoRow(icon: "calendar", title: NSLocalizedString("Age", comment: ""), value: "\(runner.age)")
+                        InfoRow(icon: "clock", title: NSLocalizedString("Average Pace", comment: ""), value: "\(runner.averagePace)")
                     }
                     
-                    infoCard(title: "Goals") {
+                    infoCard(title: NSLocalizedString("Goals", comment: "")) {
                         ForEach(goals, id: \.self) { goal in
                             InfoRow(icon: "target", title: "", value: goal)
                         }
                     }
-                    infoCard(title: "Interests") {
+                    infoCard(title: NSLocalizedString("Interests", comment: "")) {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 10) {
                             ForEach(interests, id: \.self) { interest in
                                 Text(interest)
@@ -185,11 +185,11 @@ struct RunnerDetailView: View {
     private var connectionButtonTitle: String {
         switch connectionStatus {
         case .none:
-            return "Connect"
+            return NSLocalizedString("Connect", comment: "")
         case .pending:
-            return "Request Pending"
+            return NSLocalizedString("Request Pending", comment: "")
         case .connected:
-            return "Connected"
+            return NSLocalizedString("Connected", comment: "")
         }
     }
     

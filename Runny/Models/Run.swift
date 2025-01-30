@@ -5,6 +5,10 @@ enum RunStatus: String, CaseIterable {
     case confirmed = "Confirmed"
     case canceled = "Canceled"
     case finalized = "Finalized"
+    
+    var localizedStatus: String {
+        return NSLocalizedString(self.rawValue, comment: "")
+    }
 }
 
 struct Run: Identifiable {

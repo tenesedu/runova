@@ -191,7 +191,7 @@ struct MapView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Please enable location access in Settings to see nearby runners.")
+            Text(NSLocalizedString("Please enable location access in Settings to see nearby runners.", comment: ""))
         }
         
     }

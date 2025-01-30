@@ -1,6 +1,7 @@
 // General
 "Profile" = "Perfil";
 "Preferences" = "Preferencias";
+"You" = "Tú";
 
 // Home View
 "Hello" = "Hola";
@@ -9,8 +10,8 @@
 "Join Run" = "Unirse";
 "No runners found" = "No se encontraron runners";
 "There are no runners in your area yet" = "Aún no hay runners en tu área";
-"All Runners" = "Todos los runners";
 "Explore..." = "Expolorar...";
+"Search runners, communities..." = "Buscar runners, comunidades...";
 
 // Notifications View
 "friendRequest" = "%@ te envió una solicitud de amistad";
@@ -28,8 +29,13 @@
 "Average Pace" = "Ritmo promedio";
 "Goals" = "Objetivos";
 "Interests" = "Intereses";
-
 "Settings" = "Ajustes";
+
+// Runner Profile
+"Connected" = "Conectado";
+"Message" = "Mensaje";
+"Request Pending" = "Solicitud Pendiente";
+"Requested" = "Solicitado";
 
 // Interest Related
 "followers" = "seguidores";
@@ -53,28 +59,6 @@
 "Done" = "Listo";
 "Edit" = "Editar";
 "Delete" = "Eliminar";
-
-// Spanish
-"Organizer" = "Organizador";
-"Participants" = "Participantes";
-"Pending Requests" = "Solicitudes Pendientes";
-"Requested" = "Solicitado";
-"Request Join" = "Solicitar Unirse";
-"Edit Run" = "Editar Carrera";
-"Delete" = "Eliminar";
-"Leave Run" = "Abandonar Carrera";
-"Explore..." = "Explorar...";
-"See All" = "Ver Todo";
-"All Runners" = "Todos los Corredores";
-"Personal Information" = "Información Personal";
-"Gender" = "Género";
-"City" = "Ciudad";
-"Age" = "Edad";
-"Average Pace" = "Ritmo Promedio";
-"Goals" = "Objetivos";
-"Interests" = "Intereses";
-"Settings" = "Ajustes";
-"Home" = "Inicio";
 
 // Run Detail View
 "Delete Run" = "Eliminar Carrera";
@@ -106,6 +90,29 @@
 "Create" = "Crear";
 "Error" = "Error";
 "You're the organizer" = "Eres el organizador";
+"Organizer" = "Organizador";
+"Participants" = "Participantes";
+"Pending Requests" = "Solicitudes Pendientes";
+"Requested" = "Solicitado";
+"Request Join" = "Solicitar Unirse";
+"Edit Run" = "Editar Carrera";
+"Delete" = "Eliminar";
+"Leave Run" = "Abandonar Carrera";
+"Full Run" = "Carrera Llena";
+"Confirmed" = "Confirmada";
+"Canceled" = "Cancelada";
+"Finalized" = "Finalizada";
+
+"Joined" = "Unido";
+"Created" = "Creado";
+"You haven't created any runs yet" = "Aún no has creado ninguna carrera";
+"You haven't joined any runs yet" = "Aún no te has unido a ninguna carrera";
+"No results found" = "No se han encontrado resultados";
+"Be the first to create a run!" = "¡Sé el primero en crear una carrera!";
+"Try adjusting your search" = "Prueba a ajustar tu búsqueda";
+"Search runs..." = "Buscar Carreras";
+
+"Date & Time" = "Fecha y Hora";
 
 // Chat Related
 "No messages yet" = "No hay mensajes aún";
@@ -126,15 +133,16 @@
 
 // Map View
 "Map" = "Mapa";
-"Runners Nearby" = "Runners Cercanos";
+"Runners Nearby" = "Runners Cerca";
 "No runners found" = "No se encontraron runners";
 "Select a runner to view their profile" = "Selecciona un runner para ver su perfil";
 "Location Access Required" = "Acceso a Ubicación Requerido";
 "Please enable location access in Settings to use this feature." = "Por favor habilita el acceso a la ubicación en Ajustes para usar esta función.";
-"No runners in your area" = "No hay runners en tu área";
+"No runners in your area" = "No hay runners en tu zona";
 "Try expanding your search radius" = "Intenta expandir tu radio de búsqueda";
 "%.1f km away" = "a %.1f km";
 "View Profile" = "Ver Perfil";
+"%d Runners within %d km" = "%d runners a %d km";
 
 // Notifications
 "No notifications" = "No hay notificaciones";
@@ -187,4 +195,57 @@
 "Request accepted" = "Solicitud aceptada";
 "Request declined" = "Solicitud rechazada";
 "You are now friends with" = "Ahora eres amigo de";
-"Friend request declined" = "Solicitud de amistad rechazada"; 
+"Friend request declined" = "Solicitud de amistad rechazada";
+
+// Search
+"Search runners, runs or communities..." = "Buscar runners, carreras o comunidades...";
+"Search..." = "Buscar...";
+"Search" = "Buscar";
+"All" = "Todo";
+"Runners" = "Runners";
+"Runs" = "Carreras";
+"Communities" = "Comunidades";
+"No results found" = "No se encontraron resultados";
+"Try a different search term" = "Intenta con otra búsqueda";
+
+"Discover" = "Descubrir";
+
+// New strings
+"Following" = "Siguiendo";
+"Follow" = "Seguir";
+"Popular Interests" = "Intereses Populares";
+"See All" = "Ver todo";
+
+// Feed View
+"Feed" = "Actividad";
+"All" = "Todo";
+
+// Chat View
+"Chats" = "Chats";
+"No messages yet" = "No hay mensajes aún";
+"Yesterday" = "Ayer";
+
+// Buttons & Actions
+"Save" = "Guardar";
+"Cancel" = "Cancelar";
+"Done" = "Listo";
+"Edit" = "Editar";
+"Delete" = "Eliminar";
+
+// Spanish
+
+"Explore..." = "Explorar...";
+"See All" = "Ver Todo";
+"All Runners" = "Todos los Runners";
+"Personal Information" = "Información Personal";
+"Gender" = "Género";
+"City" = "Ciudad";
+"Age" = "Edad";
+"Average Pace" = "Ritmo Promedio";
+"Goals" = "Objetivos";
+"Interests" = "Intereses";
+"Settings" = "Ajustes";
+"Home" = "Inicio";
+
+// Activity
+"Search posts..." = "Buscar posts...";

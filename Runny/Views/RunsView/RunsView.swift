@@ -46,7 +46,7 @@ struct RunsView: View {
                     HStack {
                         Image(systemName: "magnifyingglass")
                             .foregroundColor(.gray)
-                        TextField("Search runs...", text: $vm.searchText)
+                        TextField(NSLocalizedString("Search runs...", comment: ""), text: $vm.searchText)
                             .textFieldStyle(PlainTextFieldStyle())
                         
                         if !vm.searchText.isEmpty {
@@ -68,9 +68,10 @@ struct RunsView: View {
                     
                     // Segment Control
                     Picker("Run Type", selection: $vm.selectedSegment) {
-                        Text("All").tag(0)
-                        Text("Joined").tag(1)
-                        Text("Created").tag(2)
+                        Text(NSLocalizedString("All", comment: "Run filter option")).tag(0)
+                        Text(NSLocalizedString("Joined", comment: "Run filter option")).tag(1)
+                        Text(NSLocalizedString("Created", comment: "Run filter option")).tag(2)
+
                     }
                     .pickerStyle(SegmentedPickerStyle())
                     .padding()
@@ -81,9 +82,9 @@ struct RunsView: View {
                         case 0: // All Runs
                             if filteredAllRuns.isEmpty {
                                 EmptyStateView(
-                                    message: vm.searchText.isEmpty ? "No runs available" : "No results found",
+                                    message: vm.searchText.isEmpty ? NSLocalizedString("No runs available", comment: "No runs available message"): NSLocalizedString("No results found", comment: ""),
                                     systemImage: "figure.run.circle",
-                                    description: vm.searchText.isEmpty ? "Be the first to create a run!" : "Try adjusting your search"
+                                    description: vm.searchText.isEmpty ? NSLocalizedString("Be the first to create a run!", comment: "" ) : NSLocalizedString("Try adjusting your search", comment: "")
                                 )
                             } else {
                                 ForEach(filteredAllRuns) { run in
@@ -94,7 +95,7 @@ struct RunsView: View {
                         case 1: // Joined Runs
                             if filteredJoinedRuns.isEmpty {
                                 EmptyStateView(
-                                    message: vm.searchText.isEmpty ? "You haven't joined any runs yet" : "No results found",
+                                    message: vm.searchText.isEmpty ? NSLocalizedString("You haven't joined any runs yet", comment: "") : NSLocalizedString("No results found", comment: ""),
                                     systemImage: "figure.run.circle"
                                 )
                             } else {
@@ -106,7 +107,7 @@ struct RunsView: View {
                         case 2: // Created Runs
                             if filteredCreatedRuns.isEmpty {
                                 EmptyStateView(
-                                    message: vm.searchText.isEmpty ? "You haven't created any runs yet" : "No results found",
+                                    message: vm.searchText.isEmpty ? NSLocalizedString("You haven't created any runs yet", comment: "") : NSLocalizedString("No results found", comment: ""),
                                     systemImage: "figure.run.circle"
                                 )
                             } else {

@@ -45,18 +45,18 @@ var body: some View {
             }
             
             Section {
-                DatePicker("Date & Time", selection: $dateTime, in: Date()...)
+                DatePicker(NSLocalizedString("Date & Time", comment: ""), selection: $dateTime, in: Date()...)
                     .datePickerStyle(.compact)
                     .tint(.black)
                 
-                TextField("Location", text: $location)
+                TextField(NSLocalizedString("Location", comment: ""), text: $location)
                     .font(.system(size: 16))
             }
             
             Section {
                 // Distance Picker
                 HStack {
-                    Text("Distance")
+                    Text(NSLocalizedString("Distance", comment: ""))
                         .foregroundColor(.gray)
                     Spacer()
                     Picker("", selection: $distance) {
@@ -71,7 +71,7 @@ var body: some View {
                 
                 // Pace Selection
                 HStack {
-                    Text("Average Pace")
+                    Text(NSLocalizedString("Average Pace", comment: ""))
                         .foregroundColor(.gray)
                     Spacer()
                     HStack(spacing: 0) {
@@ -101,7 +101,7 @@ var body: some View {
                 
                 // Terrain Selection
                 HStack {
-                    Text("Terrain")
+                    Text(NSLocalizedString("Terrain", comment: ""))
                         .foregroundColor(.gray)
                     Spacer()
                     Menu {
@@ -128,7 +128,7 @@ var body: some View {
                 
                 // Participants Selection
                 HStack {
-                    Text("Max Participants")
+                    Text(NSLocalizedString("Max Participants", comment: ""))
                         .foregroundColor(.gray)
                     Spacer()
                     Picker("", selection: $selectedParticipants) {
@@ -144,7 +144,7 @@ var body: some View {
             
             Section {
                 Button(action: createRun) {
-                    Text("Create Run")
+                    Text(NSLocalizedString("Create Run", comment: ""))
                         .font(.system(size: 16, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .foregroundColor(.white)
@@ -159,7 +159,7 @@ var body: some View {
                 .listRowBackground(Color.clear)
             }
         }
-        .navigationTitle("Create Run")
+        .navigationTitle(NSLocalizedString("Create Run", comment: ""))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // Add the "Cancelar" button

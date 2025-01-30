@@ -29,7 +29,7 @@ struct FeedView: View {
                     HStack {
                         Image(systemName: "magnifyingglass")
                             .foregroundColor(.gray)
-                        TextField("Search posts...", text: $searchText)
+                        TextField(NSLocalizedString("Search posts...", comment: "Search bar placeholder"), text: $searchText)
                             .textFieldStyle(PlainTextFieldStyle())
                         
                         if !searchText.isEmpty {

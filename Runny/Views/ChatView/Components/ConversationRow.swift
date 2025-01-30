@@ -85,7 +85,7 @@ struct ConversationRow: View {
     
     private var subText: String {
         if conversation.type == "direct" {
-            return conversation.lastMessage.isEmpty ? "No messages yet" : conversation.lastMessage
+            return conversation.lastMessage.isEmpty ? NSLocalizedString("No messages yet", comment: "") : conversation.lastMessage
         } else {
             // For group chats
             guard !conversation.lastMessage.isEmpty else {
@@ -100,7 +100,7 @@ struct ConversationRow: View {
                     return "You: \(conversation.lastMessage)"
                 } else {
                     // Find the sender name from participants
-                    let senderName = participants.first { $0.id == lastMessageSenderId }?.name ?? "Unknown"
+                    let senderName = participants.first { $0.id == lastMessageSenderId }?.name ?? NSLocalizedString("Unknown", comment: "")
                     return "\(senderName): \(conversation.lastMessage)"
                 }
             }

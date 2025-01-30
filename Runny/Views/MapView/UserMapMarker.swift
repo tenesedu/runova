@@ -47,7 +47,7 @@ struct UserMapMarker: View {
                 )
                 .shadow(radius: 3)
                 
-                Text(isCurrentUser ? "You" : user.name)
+                Text(isCurrentUser ? NSLocalizedString("You", comment: "") : user.name)
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundColor(.black)

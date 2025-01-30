@@ -19,7 +19,7 @@ struct RunnersPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("\(runnersInRange.count) Runners within \(Int(selectedRange))km")
+                Text(String(format: NSLocalizedString("%d Runners within %d km", comment: ""), runnersInRange.count, Int(selectedRange)))
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.primary)
                 
@@ -42,7 +42,7 @@ struct RunnersPanel: View {
             if runnersInRange.isEmpty {
                 HStack {
                     Spacer()
-                    Text("No runners in your area")
+                    Text(NSLocalizedString("No runners in your area", comment: ""))
                         .font(.system(size: 14))
                         .foregroundColor(.gray)
                     Spacer()
