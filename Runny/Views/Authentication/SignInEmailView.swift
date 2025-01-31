@@ -87,7 +87,7 @@ struct SignInEmailView: View {
             .padding()
             .navigationTitle("Login")
             .fullScreenCover(isPresented: $viewModel.isLoginSuccessful) {
-                HomeView()
+                HomeView(selectedTab: .constant(0), selectedSegment: .constant(0))
             }
             .sheet(isPresented: $viewModel.showingSignUp) {
                 SignUpView()

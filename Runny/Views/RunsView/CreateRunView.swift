@@ -19,6 +19,7 @@ struct CreateRunView: View {
     @State private var organizerId: String = ""
     
     @Binding var selectedSegment: Int
+    @Binding var selectedTab: Int
     
     let terrainTypes = ["Road", "Trail", "Track", "Mixed", "Beach", "Mountain"]
     let participantsRange = Array(2...50)
@@ -143,17 +144,17 @@ var body: some View {
             }
             
             Section {
-                Button(action: createRun) {
-                    Text(NSLocalizedString("Create Run", comment: ""))
-                        .font(.system(size: 16, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(name.isEmpty || location.isEmpty ? Color.gray : Color.black)
-                        )
-                }
+                Button(action: {
+                            selectedSegment = 2
+                            selectedTab = 2    
+                        }) {
+                            Text(NSLocalizedString("Create Run", comment: ""))
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(maxWidth: .infinity)
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(RoundedRectangle(cornerRadius: 10).fill(Color.black))
+                        }
                 .disabled(name.isEmpty || location.isEmpty)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
@@ -162,16 +163,15 @@ var body: some View {
         .navigationTitle(NSLocalizedString("Create Run", comment: ""))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // Add the "Cancelar" button
             ToolbarItem(placement: .navigationBarLeading) {
                 Button("Cancel") {
-                    selectedSegment = 2
+                    selectedTab = 2
                     dismiss()
                 }
                 .foregroundColor(.black)
             }
         }
-        .navigationBarBackButtonHidden(true) 
+        .navigationBarBackButtonHidden(true)
         .alert(isPresented: $showAlert) {
             Alert(
                 title: Text("Error"),

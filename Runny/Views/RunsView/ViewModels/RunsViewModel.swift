@@ -13,7 +13,6 @@ class RunsViewModel: ObservableObject {
     @Published var createdRuns: [Run] = []
     @Published var joinedRuns: [Run] = []
     @Published var allRuns: [Run] = []
-    @Published var selectedSegment = 0
     @Published var showingCreateRun = false
     @Published var searchText = ""
     @Published var isRefreshing = false

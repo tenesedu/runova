@@ -18,8 +18,8 @@ struct HomeView: View {
     @State private var isSearchActive = false
     @State private var followedInterests: [Interest] = []
     
-    // CreateRun variable
-    @State private var selectedSegment = 2
+    @Binding var selectedTab: Int
+    @Binding var selectedSegment: Int
     
     var filteredRunners: [Runner] {
         if searchText.isEmpty {
@@ -114,7 +114,7 @@ struct HomeView: View {
                     // Action Buttons
                     HStack(spacing: 16) {
                         // Create Run Button
-                        NavigationLink(destination: CreateRunView(selectedSegment: $selectedSegment).navigationBarBackButtonHidden(true)) {
+                        NavigationLink(destination: CreateRunView(selectedSegment: $selectedSegment, selectedTab: $selectedTab).navigationBarBackButtonHidden(true)) {
                             ActionButton(
                                 title: NSLocalizedString("Create Run", comment: ""),
                                 icon: "plus.circle.fill",
@@ -123,7 +123,9 @@ struct HomeView: View {
                         }
                         
                         // Join Run Button
-                        NavigationLink(destination: RunsView().navigationBarBackButtonHidden(true)) {
+                        Button(action: {
+                            selectedTab = 2
+                        }) {
                             ActionButton(
                                 title: NSLocalizedString("Join Run", comment: ""),
                                 icon: "person.2.fill",
@@ -131,6 +133,7 @@ struct HomeView: View {
                                 isOutlined: true
                             )
                         }
+                       
                     }
                     .padding(.horizontal)
                     
@@ -356,13 +359,6 @@ struct HomeView: View {
         .frame(width: 120, height: 160)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-    }
-}
-
-
-struct HomeView_Previews: PreviewProvider {
-    static var previews: some View {
-        HomeView()
     }
 }
 

@@ -1,11 +1,12 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @State private var selectedTab = 0
+    @State private var selectedTab: Int = 0
+    @State private var selectedSegment: Int = 0
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            HomeView()
+            HomeView(selectedTab: $selectedTab, selectedSegment: $selectedSegment)
                 .tabItem {
                     Image(systemName: "house.fill")
                 }
@@ -17,7 +18,7 @@ struct MainTabView: View {
                 }
                 .tag(1)
             
-            RunsView()
+            RunsView(selectedSegment: $selectedSegment, selectedTab: $selectedTab)
                 .tabItem {
                     Image(systemName: "figure.run")
                 }

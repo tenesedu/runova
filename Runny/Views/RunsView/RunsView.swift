@@ -7,6 +7,8 @@ struct RunsView: View {
     @StateObject private var vm = RunsViewModel()
     @StateObject private var runViewModel = RunViewModel()
     
+    @Binding var selectedSegment: Int
+    @Binding var selectedTab: Int
     
     var filteredAllRuns: [Run] {
         if vm.searchText.isEmpty {
@@ -67,7 +69,7 @@ struct RunsView: View {
                     .padding(.horizontal)
                     
                     // Segment Control
-                    Picker("Run Type", selection: $vm.selectedSegment) {
+                    Picker("Run Type", selection: $selectedSegment) {
                         Text(NSLocalizedString("All", comment: "Run filter option")).tag(0)
                         Text(NSLocalizedString("Joined", comment: "Run filter option")).tag(1)
                         Text(NSLocalizedString("Created", comment: "Run filter option")).tag(2)
@@ -78,7 +80,7 @@ struct RunsView: View {
                     
                     // Runs List
                     VStack(spacing: 15) {
-                        switch vm.selectedSegment {
+                        switch selectedSegment {
                         case 0: // All Runs
                             if filteredAllRuns.isEmpty {
                                 EmptyStateView(
@@ -141,9 +143,9 @@ struct RunsView: View {
                 }
             }
             .sheet(isPresented: $vm.showingCreateRun, onDismiss: {
-                vm.selectedSegment = 2
+
             }) {
-                CreateRunView(selectedSegment: $vm.selectedSegment)
+                CreateRunView(selectedSegment: $selectedSegment, selectedTab: $selectedTab)
             }
             .onAppear {
                 vm.fetchRuns()
