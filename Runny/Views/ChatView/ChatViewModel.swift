@@ -198,12 +198,12 @@ class ChatViewModel: ObservableObject {
         batch.setData(conversationData, forDocument: newConversationRef)
         
         // Update both users' conversation arrays
-        for userId in participants {
-            let userRef = db.collection("users").document(userId)
-            batch.updateData([
-                "conversations": FieldValue.arrayUnion([newConversationRef.documentID])
-            ], forDocument: userRef)
-        }
+        // Actualiza solo el documento del currentUser
+        let currentUserRef = db.collection("users").document(currentUserId)
+        batch.updateData([
+            "conversations": FieldValue.arrayUnion([newConversationRef.documentID])
+        ], forDocument: currentUserRef)
+
         
         // Commit the batch once
         batch.commit { error in

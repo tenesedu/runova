@@ -8,11 +8,11 @@
 import SwiftUI
 
 struct CommunitySearchRow: View {
-    let community: Community
+    let community: Interest
     
     var body: some View {
         HStack(spacing: 12) {
-            AsyncImage(url: URL(string: community.imageUrl)) { image in
+            AsyncImage(url: URL(string: community.backgroundImageUrl)) { image in
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fill)

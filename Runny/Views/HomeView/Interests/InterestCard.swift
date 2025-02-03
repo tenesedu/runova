@@ -59,7 +59,7 @@ struct InterestCard: View {
                     Spacer()
                     
                     // Followers Count
-                    Text(String(format: NSLocalizedString("followers", comment: ""), followersCount))
+                    Text(String(format: NSLocalizedString("%d followers", comment: ""), followersCount))
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.8))
                 }
@@ -116,7 +116,17 @@ struct InterestCard: View {
         
         if isFollowing {
             // Follow
-            followerRef.setData(["timestamp": FieldValue.serverTimestamp()]) { error in
+            let followerData: [String: Any] = [
+                "userId": userId,
+                "followedAt": FieldValue.serverTimestamp(),
+                "role": "member"
+                ]
+            
+            let follower = Follower(id: userId, data: followerData)
+                
+            
+            
+            followerRef.setData(followerData) { error in
                 if let error = error {
                     print("Error following interest: \(error.localizedDescription)")
                     isFollowing.toggle()

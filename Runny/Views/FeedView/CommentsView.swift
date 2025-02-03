@@ -2,23 +2,7 @@ import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
 
-struct Comment: Identifiable {
-    let id: String
-    let userId: String
-    let userName: String
-    let userProfileUrl: String?
-    let content: String
-    let timestamp: Date
-    
-    init(id: String, data: [String: Any]) {
-        self.id = id
-        self.userId = data["userId"] as? String ?? ""
-        self.userName = data["userName"] as? String ?? ""
-        self.userProfileUrl = data["userProfileUrl"] as? String
-        self.content = data["content"] as? String ?? ""
-        self.timestamp = (data["timestamp"] as? Timestamp)?.dateValue() ?? Date()
-    }
-}
+
 
 struct CommentsView: View {
     let post: Post

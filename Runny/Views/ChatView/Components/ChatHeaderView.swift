@@ -54,23 +54,17 @@ struct ChatHeaderView: View {
                 }
             }
         }
-        .background(
-            NavigationStack {
-                EmptyView() 
-
-                .navigationDestination(isPresented: $showingProfile) {
-                    if conversation.type == "direct",
-                       let otherUser = conversation.otherUserProfile {
-                        if let runner = participants.first(where: { $0.id == otherUser.id }) {
-                            RunnerDetailView(runner: runner)
-                        } else {
-                            Text("User not found")
-                        }
-                    }
+        .background(Color.clear)
+        .navigationDestination(isPresented: $showingProfile) {
+            if conversation.type == "direct",
+                let otherUser = conversation.otherUserProfile {
+                if let runner = participants.first(where: { $0.id == otherUser.id }) {
+                    RunnerDetailView(runner: runner)
+                } else {
+                    Text("User not found")
                 }
             }
-        )
-
+        }
     }
     
     private var headerTitle: String {

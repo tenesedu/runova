@@ -60,7 +60,7 @@ struct InterestDetailView: View {
                             
                             // Follow Button
                             Button(action: toggleFollow) {
-                                Text(isFollowing ? "Following" : "Follow")
+                                Text(isFollowing ? NSLocalizedString("Following", comment: "") : NSLocalizedString("Follow", comment: ""))
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
                                     .padding(.horizontal, 16)
@@ -73,7 +73,7 @@ struct InterestDetailView: View {
                         
                         // Followers Count
                         HStack {
-                            Text("\(followersCount) followers")
+                            Text(String(format: NSLocalizedString("%d followers", comment: ""), followersCount))
                                 .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.9))
                             Spacer()

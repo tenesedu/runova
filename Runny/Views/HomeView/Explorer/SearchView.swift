@@ -13,7 +13,7 @@ struct SearchView: View {
     @State private var selectedScope: SearchScope = .all
     @State private var runners: [Runner] = []
     @State private var runs: [Run] = []
-    @State private var communities: [Community] = []
+    @State private var communities: [Interest] = []
     
     enum SearchScope: String, CaseIterable {
         case all = "All"
@@ -43,7 +43,7 @@ struct SearchView: View {
         }
     }
     
-    private var filteredCommunities: [Community] {
+    private var filteredCommunities: [Interest] {
         if searchText.isEmpty {
             return communities
         }
