@@ -257,25 +257,67 @@ struct HomeView: View {
         }
     }
     
+
+
+    @MainActor
     private func fetchInterests() async {
         let db = Firestore.firestore()
         
+        // Obtener el userId del usuario autenticado
+        guard let userId = Auth.auth().currentUser?.uid else {
+            print("❌ No authenticated user found")
+            return
+        }
+        
         do {
             let querySnapshot = try await db.collection("interests").order(by: "name").getDocuments()
-            await MainActor.run {
-                self.interests = querySnapshot.documents.map { document in
-                    let interest = Interest(id: document.documentID, data: document.data())
-                    print("Fetched interest: \(interest.name)")
-                    return interest
-                }
-                self.interests.shuffle()
-                print("✅ Interests loaded: \(self.interests.count)")
+            
+            // Guardar todos los intereses en self.interests
+            self.interests = querySnapshot.documents.map { document in
+                let interest = Interest(id: document.documentID, data: document.data())
+                print("Fetched interest: \(interest.name)")
+                return interest
             }
+            
+            self.interests.shuffle()
+            print("✅ Interests loaded: \(self.interests.count)")
+            
+            // Filtrar los intereses seguidos
+            var followedInterests: [Interest] = []
+            let group = DispatchGroup()
+            
+            for interest in self.interests {
+                group.enter()
+                
+                db.collection("interests")
+                    .document(interest.id)
+                    .collection("followers")
+                    .document(userId)
+                    .getDocument { (document, error) in
+                        if let error = error {
+                            print("❌ Error checking follower for \(interest.name): \(error)")
+                        } else if document?.exists == true {
+                            followedInterests.append(interest)
+                        }
+                        group.leave()
+                    }
+            }
+            
+            // Esperar que todas las consultas terminen antes de actualizar followedInterests
+            group.notify(queue: .main) {
+                Task {
+                    await MainActor.run {
+                        self.followedInterests = followedInterests
+                        print("✅ Interests followed: \(self.followedInterests.count)")
+                    }
+                }
+            }
+            
         } catch {
             print("❌ Error fetching interests: \(error.localizedDescription)")
         }
     }
-    
+
     private func fetchUserProfile() async {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
