@@ -3,13 +3,14 @@ import FirebaseFirestore
 import FirebaseAuth
 
 struct InterestDetailView: View {
+    @Environment(\.dismiss) private var dismiss
     let interest: Interest
     @State private var posts: [Post] = []
     @State private var isFollowing: Bool
     @State private var followersCount: Int
     @State private var showingCreatePost = false
     
-    private let headerHeight: CGFloat = 200
+    private let headerHeight: CGFloat = 250
     
     init(interest: Interest) {
         self.interest = interest
@@ -20,8 +21,8 @@ struct InterestDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // Header Section
-                ZStack(alignment: .bottom) {
+                // Header Section with Custom Back Button
+                ZStack(alignment: .top) {
                     // Background Image
                     AsyncImage(url: URL(string: interest.backgroundImageUrl)) { image in
                         image
@@ -35,32 +36,54 @@ struct InterestDetailView: View {
                     
                     // Gradient Overlay
                     LinearGradient(
-                        colors: [.clear, .black.opacity(0.8)],
+                        colors: [.black.opacity(0.4), .clear, .black.opacity(0.8)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                     
+                    // Custom Back Button
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(12)
+                            .background(Circle().fill(Color.black.opacity(0.6)))
+                    }
+                    .padding(.top, 50)
+                    .padding(.leading, 16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
                     // Interest Info
-                    VStack(spacing: 12) {
-                        // Title Row
+                    VStack(spacing: 16) {
+                        Spacer()
+                        
+                        // Title and Follow Button Row
                         HStack(alignment: .center, spacing: 16) {
                             // Icon and Title
                             HStack(spacing: 10) {
                                 Image(systemName: interest.iconName)
-                                    .font(.title3)
+                                    .font(.title2)
                                     .foregroundColor(interest.color)
+                                    .padding(8)
+                                    .background(Circle().fill(Color.white))
                                 
-                                Text(interest.name)
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(interest.name)
+                                        .font(.title2)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                    
+                                    Text("\(followersCount) followers")
+                                        .font(.subheadline)
+                                        .foregroundColor(.white.opacity(0.9))
+                                }
                             }
                             
                             Spacer()
                             
                             // Follow Button
                             Button(action: toggleFollow) {
-                                Text(isFollowing ? NSLocalizedString("Following", comment: "") : NSLocalizedString("Follow", comment: ""))
+                                Text(isFollowing ? "Following" : "Follow")
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
                                     .padding(.horizontal, 16)
@@ -71,49 +94,57 @@ struct InterestDetailView: View {
                             }
                         }
                         
-                        // Followers Count
-                        HStack {
-                            Text(String(format: NSLocalizedString("%d followers", comment: ""), followersCount))
+                        // Description
+                        if !interest.description.isEmpty {
+                            Text(interest.description)
                                 .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.9))
-                            Spacer()
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 4)
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+                    .padding(.bottom, 20)
                 }
                 
-                // Create Post Button
-                Button(action: {
-                    showingCreatePost = true
-                }) {
-                    HStack {
+            
+                Button(action: { showingCreatePost = true }) {
+                    HStack(spacing: 12) {
                         Image(systemName: "square.and.pencil")
                         Text("Create Post")
+                            .fontWeight(.semibold)
                     }
-                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(interest.color)
-                    .cornerRadius(12)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(interest.color)
+                            .shadow(color: interest.color.opacity(0.3), radius: 8, x: 0, y: 4)
+                    )
                 }
                 .padding()
-                .shadow(color: interest.color.opacity(0.3), radius: 8, x: 0, y: 4)
                 
-                // Feed Section
+                // Posts Section with enhanced design
                 VStack(alignment: .leading, spacing: 20) {
                     Text("Recent Posts")
                         .font(.title3)
                         .fontWeight(.semibold)
                     
                     if posts.isEmpty {
-                        VStack(spacing: 12) {
+                        VStack(spacing: 16) {
+                            Image(systemName: "text.bubble")
+                                .font(.system(size: 40))
+                                .foregroundColor(.gray)
+                            
                             Text("No posts yet")
                                 .font(.headline)
+                            
                             Text("Be the first to post about \(interest.name)")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 40)
@@ -129,7 +160,7 @@ struct InterestDetailView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarHidden(true)
         .refreshable {
             // Refresh all content
             await refreshContent()

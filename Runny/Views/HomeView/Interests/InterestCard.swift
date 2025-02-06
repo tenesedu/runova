@@ -120,11 +120,7 @@ struct InterestCard: View {
                 "userId": userId,
                 "followedAt": FieldValue.serverTimestamp(),
                 "role": "member"
-                ]
-            
-            let follower = Follower(id: userId, data: followerData)
-                
-            
+            ]
             
             followerRef.setData(followerData) { error in
                 if let error = error {
@@ -137,6 +133,13 @@ struct InterestCard: View {
                 interestRef.updateData([
                     "followersCount": FieldValue.increment(Int64(1))
                 ])
+                
+                // Notify parent views to update their arrays
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("InterestFollowStatusChanged"),
+                    object: nil,
+                    userInfo: ["interest": self.interest, "isFollowing": true]
+                )
             }
         } else {
             // Unfollow
@@ -151,6 +154,13 @@ struct InterestCard: View {
                 interestRef.updateData([
                     "followersCount": FieldValue.increment(Int64(-1))
                 ])
+                
+                // Notify parent views to update their arrays
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("InterestFollowStatusChanged"),
+                    object: nil,
+                    userInfo: ["interest": self.interest, "isFollowing": false]
+                )
             }
         }
     }

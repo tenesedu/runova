@@ -5,7 +5,7 @@ import CoreLocation
 
 struct HomeView: View {
     @State private var users: [UserApp] = []
-    @State private var interests: [Interest] = []
+    @StateObject private var interestsViewModel = InterestsViewModel()
     @State private var isLoading = true
     @State private var showingProfile = false
     @State private var showingAllRunners = false
@@ -16,7 +16,6 @@ struct HomeView: View {
     @StateObject private var locationManager = LocationManager()
     @StateObject private var notificationManager = NotificationManager()
     @State private var isSearchActive = false
-    @State private var followedInterests: [Interest] = []
     
     @Binding var selectedTab: Int
     @Binding var selectedSegment: Int
@@ -33,9 +32,9 @@ struct HomeView: View {
     
     var filteredInterests: [Interest] {
         if searchText.isEmpty {
-            return interests
+            return interestsViewModel.interests
         }
-        return interests.filter { interest in
+        return interestsViewModel.interests.filter { interest in
             interest.name.localizedCaseInsensitiveContains(searchText.localized)
         }
     }
@@ -107,8 +106,8 @@ struct HomeView: View {
                     
                     // Updated Interests Section
                     InterestsTabView(
-                        interests: $interests,
-                        followedInterests: $followedInterests
+                        interests: $interestsViewModel.interests,
+                        followedInterests: $interestsViewModel.followedInterests
                     )
                     
                     // Action Buttons
@@ -229,15 +228,18 @@ struct HomeView: View {
             .onAppear {
                 locationManager.requestLocation()
                 Task {
-                    await fetchUserProfile()
-                    await fetchUsers()
-                    await fetchInterests()
+                    if !interestsViewModel.hasLoadedInterests {
+                        await fetchUserProfile()
+                        await fetchUsers()
+                        await interestsViewModel.fetchInterests()
+                    }
+                    notificationManager.fetchNotifications()
                 }
-                notificationManager.fetchNotifications()
             }
             .refreshable {
                 Task {
                     await fetchUsers()
+                    await interestsViewModel.fetchInterests()
                 }
             }
         }
@@ -257,67 +259,6 @@ struct HomeView: View {
         }
     }
     
-
-
-    @MainActor
-    private func fetchInterests() async {
-        let db = Firestore.firestore()
-        
-        // Obtener el userId del usuario autenticado
-        guard let userId = Auth.auth().currentUser?.uid else {
-            print("❌ No authenticated user found")
-            return
-        }
-        
-        do {
-            let querySnapshot = try await db.collection("interests").order(by: "name").getDocuments()
-            
-            // Guardar todos los intereses en self.interests
-            self.interests = querySnapshot.documents.map { document in
-                let interest = Interest(id: document.documentID, data: document.data())
-                print("Fetched interest: \(interest.name)")
-                return interest
-            }
-            
-            self.interests.shuffle()
-            print("✅ Interests loaded: \(self.interests.count)")
-            
-            // Filtrar los intereses seguidos
-            var followedInterests: [Interest] = []
-            let group = DispatchGroup()
-            
-            for interest in self.interests {
-                group.enter()
-                
-                db.collection("interests")
-                    .document(interest.id)
-                    .collection("followers")
-                    .document(userId)
-                    .getDocument { (document, error) in
-                        if let error = error {
-                            print("❌ Error checking follower for \(interest.name): \(error)")
-                        } else if document?.exists == true {
-                            followedInterests.append(interest)
-                        }
-                        group.leave()
-                    }
-            }
-            
-            // Esperar que todas las consultas terminen antes de actualizar followedInterests
-            group.notify(queue: .main) {
-                Task {
-                    await MainActor.run {
-                        self.followedInterests = followedInterests
-                        print("✅ Interests followed: \(self.followedInterests.count)")
-                    }
-                }
-            }
-            
-        } catch {
-            print("❌ Error fetching interests: \(error.localizedDescription)")
-        }
-    }
-
     private func fetchUserProfile() async {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
