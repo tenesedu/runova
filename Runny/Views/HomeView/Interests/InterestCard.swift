@@ -5,14 +5,16 @@ import FirebaseFirestore
 struct InterestCard: View {
     let interest: Interest
     @State private var isFollowing: Bool
-    @State private var followersCount: Int
+    @State private var followerCount: Int
+    let onFollowToggle: () -> Void
     let cardWidth: CGFloat = 280
     let cardHeight: CGFloat = 180
     
-    init(interest: Interest) {
+    init(interest: Interest, onFollowToggle: @escaping () -> Void) {
         self.interest = interest
         self._isFollowing = State(initialValue: interest.isFollowed)
-        self._followersCount = State(initialValue: interest.followersCount)
+        self._followerCount = State(initialValue: interest.followerCount)
+        self.onFollowToggle = onFollowToggle
     }
     
     var body: some View {
@@ -59,7 +61,7 @@ struct InterestCard: View {
                     Spacer()
                     
                     // Followers Count
-                    Text(String(format: NSLocalizedString("%d followers", comment: ""), followersCount))
+                    Text(String(format: NSLocalizedString("%d followers", comment: ""), followerCount))
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.8))
                 }
@@ -67,6 +69,7 @@ struct InterestCard: View {
                 // Follow Button
                 Button(action: {
                     toggleFollow()
+                    onFollowToggle()
                 }) {
                     Text(isFollowing ? NSLocalizedString("Following", comment: "") :  NSLocalizedString("Follow", comment: ""))
                         .font(.subheadline)
@@ -90,78 +93,78 @@ struct InterestCard: View {
     
     private func checkFollowStatus() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
-        
+
         let db = Firestore.firestore()
+        let interestRef = db.collection("interests").document(interest.id)
+
+        // Listen for real-time updates
+        interestRef.addSnapshotListener { snapshot, error in
+            if let error = error {
+                print("Error checking follow status: \(error.localizedDescription)")
+                return
+            }
+
+            if let data = snapshot?.data() {
+                DispatchQueue.main.async {
+                    self.followerCount = data["followerCount"] as? Int ?? 0
+                }
+            }
+        }
+
+        // Listen for user's follow status
         db.collection("interests").document(interest.id)
             .collection("followers").document(userId)
-            .getDocument { snapshot, error in
+            .addSnapshotListener { snapshot, error in
                 if let error = error {
                     print("Error checking follow status: \(error.localizedDescription)")
                     return
                 }
-                isFollowing = snapshot?.exists ?? false
+                DispatchQueue.main.async {
+                    self.isFollowing = snapshot?.exists ?? false
+                }
             }
     }
+
     
     private func toggleFollow() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
         let db = Firestore.firestore()
         let interestRef = db.collection("interests").document(interest.id)
-        let followerRef = interestRef.collection("followers").document(userId)
-        
-        // Optimistically update UI
-        isFollowing.toggle()
-        followersCount += isFollowing ? 1 : -1
+        let followerRef = db.collection("interests").document(interest.id).collection("followers").document(userId)
         
         if isFollowing {
-            // Follow
-            let followerData: [String: Any] = [
+            followerRef.delete { error in
+                if let error = error {
+                    print("Error unfollowing interest: \(error.localizedDescription)")
+                    return
+                }
+                
+                interestRef.updateData(["followerCount": FieldValue.increment(Int64(-1))])
+                followerCount -= 1
+                isFollowing.toggle()
+            }
+           
+        }else {
+            let followerData: [String : Any] = [
                 "userId": userId,
                 "followedAt": FieldValue.serverTimestamp(),
                 "role": "member"
             ]
-            
+                                               
             followerRef.setData(followerData) { error in
-                if let error = error {
-                    print("Error following interest: \(error.localizedDescription)")
-                    isFollowing.toggle()
-                    followersCount -= 1
-                    return
+                    if let error = error {
+                        print("Error following interest: \(error.localizedDescription)")
+                        return
+                    }
+                
+                interestRef.updateData(["followerCount": FieldValue.increment(Int64(1))])
+                followerCount += 1
+                isFollowing.toggle()
                 }
-                
-                interestRef.updateData([
-                    "followersCount": FieldValue.increment(Int64(1))
-                ])
-                
-                // Notify parent views to update their arrays
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("InterestFollowStatusChanged"),
-                    object: nil,
-                    userInfo: ["interest": self.interest, "isFollowing": true]
-                )
-            }
-        } else {
-            // Unfollow
-            followerRef.delete { error in
-                if let error = error {
-                    print("Error unfollowing interest: \(error.localizedDescription)")
-                    isFollowing.toggle()
-                    followersCount += 1
-                    return
-                }
-                
-                interestRef.updateData([
-                    "followersCount": FieldValue.increment(Int64(-1))
-                ])
-                
-                // Notify parent views to update their arrays
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("InterestFollowStatusChanged"),
-                    object: nil,
-                    userInfo: ["interest": self.interest, "isFollowing": false]
-                )
-            }
+         
         }
     }
+    
+ 
 }

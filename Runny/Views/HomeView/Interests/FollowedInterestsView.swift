@@ -1,10 +1,11 @@
 import SwiftUI
 
 struct FollowedInterestsView: View {
-    @Binding var interests: [Interest]
+    @Binding var suggestedInterests: [Interest]
+    @Binding var followedInterests: [Interest]
     
     var body: some View {
-        if interests.isEmpty {
+        if followedInterests.isEmpty {
             VStack(spacing: 8) {
                 Image(systemName: "heart")
                     .font(.system(size: 40))
@@ -18,12 +19,28 @@ struct FollowedInterestsView: View {
         } else {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
-                    ForEach(interests) { interest in
-                        InterestCard(interest: interest)
+                    ForEach(followedInterests) { interest in
+                        InterestCard(interest: interest, onFollowToggle: {
+                            unfollowInterest(interest)
+                        })
                     }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
             }
         }
     }
-} 
+        
+    private func unfollowInterest(_ interest: Interest) {
+        if let index = followedInterests.firstIndex(where: { $0.id == interest.id }) {
+            followedInterests.remove(at: index)
+        }
+        
+        if !suggestedInterests.contains(where: { $0.id == interest.id }) {
+            var updatedInterest = interest
+            updatedInterest.isFollowed = false
+            suggestedInterests.append(updatedInterest) 
+        }
+    }
+
+    }
+

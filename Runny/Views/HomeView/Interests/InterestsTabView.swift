@@ -37,7 +37,8 @@ import SwiftUI
                     .tag(0)
                     
                     // Following Tab
-                    FollowedInterestsView(interests: $followedInterests)
+                    FollowedInterestsView(suggestedInterests: $interests,
+                                          followedInterests: $followedInterests)
                         .tag(1)
                 }
                 .frame(height: 190) // Set a fixed height for the TabView

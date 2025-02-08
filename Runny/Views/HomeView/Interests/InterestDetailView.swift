@@ -7,7 +7,7 @@ struct InterestDetailView: View {
     let interest: Interest
     @State private var posts: [Post] = []
     @State private var isFollowing: Bool
-    @State private var followersCount: Int
+    @State private var followerCount: Int
     @State private var showingCreatePost = false
     
     private let headerHeight: CGFloat = 250
@@ -15,7 +15,7 @@ struct InterestDetailView: View {
     init(interest: Interest) {
         self.interest = interest
         self._isFollowing = State(initialValue: interest.isFollowed)
-        self._followersCount = State(initialValue: interest.followersCount)
+        self._followerCount = State(initialValue: interest.followerCount)
     }
     
     var body: some View {
@@ -73,7 +73,7 @@ struct InterestDetailView: View {
                                         .fontWeight(.bold)
                                         .foregroundColor(.white)
                                     
-                                    Text("\(followersCount) followers")
+                                    Text("\(followerCount) followers")
                                         .font(.subheadline)
                                         .foregroundColor(.white.opacity(0.9))
                                 }
@@ -200,7 +200,7 @@ struct InterestDetailView: View {
         
         // Optimistically update UI
         isFollowing.toggle()
-        followersCount += isFollowing ? 1 : -1
+        followerCount += isFollowing ? 1 : -1
         
         if isFollowing {
             // Follow
@@ -208,7 +208,7 @@ struct InterestDetailView: View {
                 if let error = error {
                     print("Error following interest: \(error.localizedDescription)")
                     isFollowing.toggle()
-                    followersCount -= 1
+                    followerCount -= 1
                     return
                 }
                 
@@ -222,7 +222,7 @@ struct InterestDetailView: View {
                 if let error = error {
                     print("Error unfollowing interest: \(error.localizedDescription)")
                     isFollowing.toggle()
-                    followersCount += 1
+                    followerCount += 1
                     return
                 }
                 

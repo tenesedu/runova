@@ -3,17 +3,16 @@ import FirebaseFirestore
 
 struct Interest: Identifiable {
     let id: String
-    let name: String
-    let iconName: String
-    let backgroundImageUrl: String
-    let description: String
-    let color: Color
-    var followersCount: Int
+    var name: String
+    var iconName: String
+    var backgroundImageUrl: String
+    var description: String
+    var color: Color
+    var followerCount: Int
     var isFollowed: Bool
     
     let createdBy: String
     let createdAt: Date
-    let adminId: String
     
     init(id: String, data: [String: Any]) {
         self.id = id
@@ -21,11 +20,11 @@ struct Interest: Identifiable {
         self.iconName = data["iconName"] as? String ?? ""
         self.backgroundImageUrl = data["backgroundImageUrl"] as? String ?? ""
         self.description = data["description"] as? String ?? ""
-        self.followersCount = data["followersCount"] as? Int ?? 0
+        self.followerCount = data["followerCount"] as? Int ?? 0
         self.isFollowed = false
         self.createdBy = data["createdBy"] as? String ?? ""
         self.createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
-        self.adminId = data["adminId"] as? String ?? ""
+
         
         if let colorHex = data["color"] as? String {
             self.color = Color(hex: colorHex)
