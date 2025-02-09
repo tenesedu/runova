@@ -249,3 +249,9 @@
 
 // Activity
 "Search posts..." = "Buscar posts...";
+
+// Interests
+"Create Post" = "Postear";
+"Recent Posts" = "Publicaciones Recientes";
+"No posts yet" = "Aún no hay publicaciones";
+"Be the first to post about %@" = "Sé el primero en postear sobre %@";

@@ -10,18 +10,26 @@ import FirebaseFirestore
 
 struct Comment: Identifiable {
     let id: String
-    let createdBy: String
+    let text: String
+    let userId: String
     let userName: String
-    let userProfileUrl: String?
-    let content: String
-    let timestamp: Date
+    let userImageUrl: String
+    let createdAt: Date
+    let parentId: String?
+    let postId: String
+    var replies: [Comment] = []
+    var likesCount: Int
+    var isLiked: Bool = false
     
-    init(id: String, data: [String: Any]) {
+    init(id: String, data: [String: Any], postId: String) {
         self.id = id
-        self.createdBy = data["createdBy"] as? String ?? ""
+        self.text = data["text"] as? String ?? ""
+        self.userId = data["userId"] as? String ?? ""
         self.userName = data["userName"] as? String ?? ""
-        self.userProfileUrl = data["userProfileUrl"] as? String
-        self.content = data["content"] as? String ?? ""
-        self.timestamp = (data["timestamp"] as? Timestamp)?.dateValue() ?? Date()
+        self.userImageUrl = data["userImageUrl"] as? String ?? ""
+        self.createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+        self.parentId = data["parentId"] as? String
+        self.postId = postId
+        self.likesCount = data["likesCount"] as? Int ?? 0
     }
 }

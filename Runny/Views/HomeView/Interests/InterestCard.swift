@@ -20,7 +20,7 @@ struct InterestCard: View {
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             // Navigation Link for the whole card except the follow button
-            NavigationLink(destination: InterestDetailView(interest: interest)) {
+            NavigationLink(destination: InterestDetailView(interest: interest, isFollowing: $isFollowing, followerCount: $followerCount)) {
                 ZStack(alignment: .bottomLeading) {
                     // Background Image
                     AsyncImage(url: URL(string: interest.backgroundImageUrl)) { image in
@@ -141,8 +141,7 @@ struct InterestCard: View {
                 }
                 
                 interestRef.updateData(["followerCount": FieldValue.increment(Int64(-1))])
-                followerCount -= 1
-                isFollowing.toggle()
+              
             }
            
         }else {
@@ -159,8 +158,7 @@ struct InterestCard: View {
                     }
                 
                 interestRef.updateData(["followerCount": FieldValue.increment(Int64(1))])
-                followerCount += 1
-                isFollowing.toggle()
+           
                 }
          
         }

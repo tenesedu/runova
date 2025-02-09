@@ -6,17 +6,11 @@ struct InterestDetailView: View {
     @Environment(\.dismiss) private var dismiss
     let interest: Interest
     @State private var posts: [Post] = []
-    @State private var isFollowing: Bool
-    @State private var followerCount: Int
+    @Binding var isFollowing: Bool
+    @Binding var followerCount: Int
     @State private var showingCreatePost = false
     
     private let headerHeight: CGFloat = 250
-    
-    init(interest: Interest) {
-        self.interest = interest
-        self._isFollowing = State(initialValue: interest.isFollowed)
-        self._followerCount = State(initialValue: interest.followerCount)
-    }
     
     var body: some View {
         ScrollView {
@@ -112,7 +106,7 @@ struct InterestDetailView: View {
                 Button(action: { showingCreatePost = true }) {
                     HStack(spacing: 12) {
                         Image(systemName: "square.and.pencil")
-                        Text("Create Post")
+                        Text(NSLocalizedString("Create Post", comment: ""))
                             .fontWeight(.semibold)
                     }
                     .foregroundColor(.white)
@@ -128,7 +122,7 @@ struct InterestDetailView: View {
                 
                 // Posts Section with enhanced design
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Recent Posts")
+                    Text(NSLocalizedString("Recent Posts", comment: ""))
                         .font(.title3)
                         .fontWeight(.semibold)
                     
@@ -138,10 +132,10 @@ struct InterestDetailView: View {
                                 .font(.system(size: 40))
                                 .foregroundColor(.gray)
                             
-                            Text("No posts yet")
+                            Text(NSLocalizedString("No posts yet", comment: ""))
                                 .font(.headline)
                             
-                            Text("Be the first to post about \(interest.name)")
+                            Text(String(format: NSLocalizedString("Be the first to post about %@", comment :"") , interest.name))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
@@ -151,7 +145,7 @@ struct InterestDetailView: View {
                     } else {
                         LazyVStack(spacing: 16) {
                             ForEach(posts) { post in
-                                PostCard(post: post)
+                                PostView(post: post)
                             }
                         }
                     }
@@ -166,9 +160,7 @@ struct InterestDetailView: View {
             await refreshContent()
         }
         .sheet(isPresented: $showingCreatePost) {
-            NavigationView {
-                NewPostView(interests: [interest], selectedInterest: interest)
-            }
+            NewInterestPostView(interest: interest)
         }
         .onAppear {
             checkFollowStatus()
@@ -178,16 +170,35 @@ struct InterestDetailView: View {
     
     private func checkFollowStatus() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
-        
+
         let db = Firestore.firestore()
+        let interestRef = db.collection("interests").document(interest.id)
+
+        // Listen for real-time updates
+        interestRef.addSnapshotListener { snapshot, error in
+            if let error = error {
+                print("Error checking follow status: \(error.localizedDescription)")
+                return
+            }
+
+            if let data = snapshot?.data() {
+                DispatchQueue.main.async {
+                    self.followerCount = data["followerCount"] as? Int ?? 0
+                }
+            }
+        }
+
+        // Listen for user's follow status
         db.collection("interests").document(interest.id)
             .collection("followers").document(userId)
-            .getDocument { snapshot, error in
+            .addSnapshotListener { snapshot, error in
                 if let error = error {
                     print("Error checking follow status: \(error.localizedDescription)")
                     return
                 }
-                isFollowing = snapshot?.exists ?? false
+                DispatchQueue.main.async {
+                    self.isFollowing = snapshot?.exists ?? false
+                }
             }
     }
     
@@ -196,48 +207,45 @@ struct InterestDetailView: View {
         
         let db = Firestore.firestore()
         let interestRef = db.collection("interests").document(interest.id)
-        let followerRef = interestRef.collection("followers").document(userId)
-        
-        // Optimistically update UI
-        isFollowing.toggle()
-        followerCount += isFollowing ? 1 : -1
+        let followerRef = db.collection("interests").document(interest.id).collection("followers").document(userId)
         
         if isFollowing {
-            // Follow
-            followerRef.setData(["timestamp": FieldValue.serverTimestamp()]) { error in
-                if let error = error {
-                    print("Error following interest: \(error.localizedDescription)")
-                    isFollowing.toggle()
-                    followerCount -= 1
-                    return
-                }
-                
-                interestRef.updateData([
-                    "followersCount": FieldValue.increment(Int64(1))
-                ])
-            }
-        } else {
-            // Unfollow
             followerRef.delete { error in
                 if let error = error {
                     print("Error unfollowing interest: \(error.localizedDescription)")
-                    isFollowing.toggle()
-                    followerCount += 1
                     return
                 }
                 
-                interestRef.updateData([
-                    "followersCount": FieldValue.increment(Int64(-1))
-                ])
+                interestRef.updateData(["followerCount": FieldValue.increment(Int64(-1))])
+                
             }
+           
+        }else {
+            let followerData: [String : Any] = [
+                "userId": userId,
+                "followedAt": FieldValue.serverTimestamp(),
+                "role": "member"
+            ]
+                                               
+            followerRef.setData(followerData) { error in
+                    if let error = error {
+                        print("Error following interest: \(error.localizedDescription)")
+                        return
+                    }
+                
+                interestRef.updateData(["followerCount": FieldValue.increment(Int64(1))])
+               
+                }
+         
         }
     }
+    
     
     private func fetchPosts() {
         let db = Firestore.firestore()
         db.collection("posts")
-            .whereField("interest", isEqualTo: interest.name)
-            .order(by: "timestamp", descending: true)
+            .whereField("interestId", isEqualTo: interest.id)
+            .order(by: "createdAt", descending: true)
             .addSnapshotListener { snapshot, error in
                 guard let documents = snapshot?.documents else {
                     print("Error fetching posts: \(error?.localizedDescription ?? "Unknown error")")
