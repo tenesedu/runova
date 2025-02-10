@@ -3,7 +3,6 @@ import SwiftUI
 
 struct Post: Identifiable {
     let id: String
-    let title: String
     let content: String
     let interestId: String
     let interestName: String
@@ -11,13 +10,12 @@ struct Post: Identifiable {
     let createdBy: String
     let creatorName: String
     let creatorImageUrl: String
-    var likesCount: Int
-    var commentsCount: Int
-    var isLiked: Bool = false 
+    let likesCount: Int
+    let commentsCount: Int
+    let imageUrl: String?
     
     init(id: String, data: [String: Any]) {
         self.id = id
-        self.title = data["title"] as? String ?? ""
         self.content = data["content"] as? String ?? ""
         self.interestId = data["interestId"] as? String ?? ""
         self.interestName = data["interestName"] as? String ?? ""
@@ -27,5 +25,6 @@ struct Post: Identifiable {
         self.creatorImageUrl = data["creatorImageUrl"] as? String ?? ""
         self.likesCount = data["likesCount"] as? Int ?? 0
         self.commentsCount = data["commentsCount"] as? Int ?? 0
+        self.imageUrl = data["imageUrl"] as? String
     }
 }

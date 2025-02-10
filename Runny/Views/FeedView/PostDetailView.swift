@@ -11,7 +11,7 @@ struct PostDetailView: View {
     
     init(post: Post) {
         self.post = post
-        self._likesCount = State(initialValue: post.likes)
+        self._likesCount = State(initialValue: post.likesCount)
     }
     
     var body: some View {
@@ -19,7 +19,7 @@ struct PostDetailView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // User Info
                 HStack {
-                    AsyncImage(url: URL(string: post.userProfileUrl ?? "")) { image in
+                    AsyncImage(url: URL(string: post.creatorImageUrl ?? "")) { image in
                         image
                             .resizable()
                             .scaledToFill()
@@ -31,16 +31,16 @@ struct PostDetailView: View {
                     .clipShape(Circle())
                     
                     VStack(alignment: .leading) {
-                        Text(post.userName)
+                        Text(post.creatorName)
                             .font(.headline)
-                        Text(post.interest)
+                        Text(post.interestName)
                             .font(.subheadline)
                             .foregroundColor(.blue)
                     }
                     
                     Spacer()
                     
-                    Text(timeAgo(from: post.timestamp))
+                    Text(timeAgo(from: post.createdAt))
                         .font(.caption)
                         .foregroundColor(.gray)
                 }
@@ -66,7 +66,7 @@ struct PostDetailView: View {
                     Button(action: { showingComments = true }) {
                         HStack {
                             Image(systemName: "bubble.right")
-                            Text("\(post.comments)")
+                            Text("\(post.commentsCount)")
                         }
                     }
                     .buttonStyle(BorderlessButtonStyle())
