@@ -1,0 +1,342 @@
+import SwiftUI
+import FirebaseFirestore
+import FirebaseAuth
+import FirebaseStorage
+
+struct NewInterestPostView: View {
+    @Environment(\.dismiss) private var dismiss
+    let interest: Interest
+    
+    @State private var content: String = ""
+    @State private var selectedImage: UIImage?
+    @State private var showingImagePicker = false
+    @State private var isLoading = false
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    @FocusState private var isFocused: Bool
+    @State private var userImage: String = ""
+    @State private var userName: String = ""
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Top Navigation Bar
+            VStack(spacing: 0) {
+                HStack {
+                    Button(action: { dismiss() }) {
+                        Text("Cancel")
+                            .foregroundColor(.gray)
+                    }
+                    
+                    Spacer()
+                    
+                    Text("New Thread")
+                        .font(.headline)
+                    
+                    Spacer()
+                    
+                    Button(action: createPost) {
+                        Text("Post")
+                            .fontWeight(.semibold)
+                            .foregroundColor(!content.isEmpty ? .blue : .gray)
+                    }
+                    .disabled(content.isEmpty)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 12)
+                
+                Divider()
+                    .background(Color.gray.opacity(0.3))
+            }
+            
+            // Content Area
+            ScrollView {
+                VStack(spacing: 0) {
+                    HStack(alignment: .top, spacing: 12) {
+                        // User Profile Image
+                        AsyncImage(url: URL(string: userImage)) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            Circle().fill(Color.gray.opacity(0.3))
+                        }
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            // User Name
+                            Text(userName)
+                                .font(.system(size: 15, weight: .semibold))
+                            
+                            // Text Input
+                            TextField("Start a thread...", text: $content, axis: .vertical)
+                                .focused($isFocused)
+                                .textInputAutocapitalization(.never)
+                                .frame(minHeight: 100)
+                            
+                            // Media Icons
+                            HStack(spacing: 16) {
+                                Button(action: { showingImagePicker = true }) {
+                                    Image(systemName: "photo.on.rectangle")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.gray)
+                                }
+                                
+                                Button(action: { /* Camera action */ }) {
+                                    Image(systemName: "camera")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .padding(.top, 8)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 12)
+                    
+                    // Selected Image (if any)
+                    if let selectedImage = selectedImage {
+                        ZStack(alignment: .topTrailing) {
+                            Image(uiImage: selectedImage)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxHeight: 200)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .padding(.horizontal)
+                                .padding(.top, 12)
+                            
+                            Button(action: { self.selectedImage = nil }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.white)
+                                    .background(Circle().fill(Color.black.opacity(0.5)))
+                            }
+                            .padding(.top, 16)
+                            .padding(.trailing, 24)
+                        }
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // Bottom Toolbar with Post Button
+            if isFocused {
+                VStack(spacing: 0) {
+                    Divider()
+                        .background(Color.gray.opacity(0.3))
+                    
+                    HStack {
+                        Text("Anyone can reply")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        
+                        Spacer()
+                        
+                        Button(action: createPost) {
+                            Text("Post")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 8)
+                                .background(content.isEmpty ? Color.blue.opacity(0.5) : Color.blue)
+                                .cornerRadius(20)
+                        }
+                        .disabled(content.isEmpty)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                }
+            }
+        }
+        .sheet(isPresented: $showingImagePicker) {
+            ImagePicker(image: $selectedImage)
+        }
+        .alert("Error", isPresented: $showAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(alertMessage)
+        }
+        .onAppear {
+            fetchUserData()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isFocused = true
+            }
+        }
+    }
+    
+    private func fetchUserData() {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        let db = Firestore.firestore()
+        
+        db.collection("users").document(userId).getDocument { snapshot, error in
+            if let userData = snapshot?.data() {
+                self.userImage = userData["profileImageUrl"] as? String ?? ""
+                self.userName = userData["name"] as? String ?? ""
+            }
+        }
+    }
+    
+    private func createPost() {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        isLoading = true
+        
+        let db = Firestore.firestore()
+        
+        // First check if user is following the interest
+        db.collection("interests")
+            .document(interest.id)
+            .collection("followers")
+            .document(userId)
+            .getDocument { snapshot, error in
+                guard let exists = snapshot?.exists, exists else {
+                    isLoading = false
+                    alertMessage = "You must follow this interest to create posts"
+                    showAlert = true
+                    return
+                }
+                
+                // Get user data and create post
+                db.collection("users").document(userId).getDocument { snapshot, error in
+                    guard let userData = snapshot?.data(),
+                          let userName = userData["name"] as? String,
+                          let userImageUrl = userData["profileImageUrl"] as? String else {
+                        isLoading = false
+                        alertMessage = "Error fetching user data"
+                        showAlert = true
+                        return
+                    }
+                    
+                    if let image = selectedImage {
+                        uploadImage(image) { imageUrl in
+                            guard let imageUrl = imageUrl else {
+                                isLoading = false
+                                alertMessage = "Error uploading image"
+                                showAlert = true
+                                return
+                            }
+                            
+                            let postData: [String: Any] = [
+                                "content": content,
+                                "interestId": interest.id,
+                                "interestName": interest.name,
+                                "createdAt": FieldValue.serverTimestamp(),
+                                "createdBy": userId,
+                                "creatorName": userName,
+                                "creatorImageUrl": userImageUrl,
+                                "likesCount": 0,
+                                "commentsCount": 0,
+                                "imageUrl": imageUrl
+                            ]
+                            
+                            createPostInFirestore(postData)
+                        }
+                    } else {
+                        let postData: [String: Any] = [
+                            "content": content,
+                            "interestId": interest.id,
+                            "interestName": interest.name,
+                            "createdAt": FieldValue.serverTimestamp(),
+                            "createdBy": userId,
+                            "creatorName": userName,
+                            "creatorImageUrl": userImageUrl,
+                            "likesCount": 0,
+                            "commentsCount": 0
+                        ]
+                        
+                        createPostInFirestore(postData)
+                    }
+                }
+            }
+    }
+    
+    private func createPostInFirestore(_ postData: [String: Any]) {
+        let db = Firestore.firestore()
+        db.collection("posts").addDocument(data: postData) { error in
+            isLoading = false
+            if let error = error {
+                alertMessage = error.localizedDescription
+                showAlert = true
+            } else {
+                dismiss()
+            }
+        }
+    }
+    
+    private func uploadImage(_ image: UIImage, completion: @escaping (String?) -> Void) {
+        guard let imageData = image.jpegData(compressionQuality: 0.5) else {
+            completion(nil)
+            return
+        }
+        
+        let storage = Storage.storage()
+        let storageRef = storage.reference()
+        let imageRef = storageRef.child("post_images/\(UUID().uuidString).jpg")
+        
+        imageRef.putData(imageData, metadata: nil) { metadata, error in
+            if error != nil {
+                completion(nil)
+                return
+            }
+            
+            imageRef.downloadURL { url, error in
+                completion(url?.absoluteString)
+            }
+        }
+    }
+}
+
+#Preview {
+    // Mock Interest Data
+    let mockInterestData: [String: Any] = [
+        "name": "Technology",
+        "iconName": "laptopcomputer",
+        "backgroundImageUrl": "https://example.com/tech-background.jpg",
+        "description": "Explore the latest in tech and innovation.",
+        "color": "#007AFF", // Hex color for blue
+        "followerCount": 1200,
+        "createdBy": "user123",
+        "createdAt": Timestamp(date: Date())
+    ]
+    
+    let mockInterest = Interest(id: "1", data: mockInterestData)
+    
+    return NewInterestPostView(interest: mockInterest)
+    
+}
+// Image Picker
+struct ImagePicker: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    @Environment(\.presentationMode) private var presentationMode
+    
+    func makeUIViewController(context: UIViewControllerRepresentableContext<ImagePicker>) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.delegate = context.coordinator
+        picker.sourceType = .photoLibrary
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: UIViewControllerRepresentableContext<ImagePicker>) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let parent: ImagePicker
+        
+        init(_ parent: ImagePicker) {
+            self.parent = parent
+        }
+        
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                parent.image = image
+            }
+            parent.presentationMode.wrappedValue.dismiss()
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.presentationMode.wrappedValue.dismiss()
+        }
+    }
+} 
