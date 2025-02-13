@@ -9,10 +9,12 @@ struct InterestDetailView: View {
     @Binding var isFollowing: Bool
     @Binding var followerCount: Int
     @State private var showingCreatePost = false
+    @State private var selectedPost: Post?
     
     private let headerHeight: CGFloat = 250
     
     var body: some View {
+       
         ScrollView {
             VStack(spacing: 0) {
                 // Header Section with Custom Back Button
@@ -102,7 +104,7 @@ struct InterestDetailView: View {
                     .padding(.bottom, 20)
                 }
                 
-            
+                
                 Button(action: { showingCreatePost = true }) {
                     HStack(spacing: 12) {
                         Image(systemName: "square.and.pencil")
@@ -144,8 +146,14 @@ struct InterestDetailView: View {
                         .padding(.vertical, 40)
                     } else {
                         LazyVStack(spacing: 16) {
+                                                
                             ForEach(posts) { post in
-                                PostView(post: post)
+                                Button(action: {
+                                    selectedPost = post
+                                }) {
+                                    PostView(post: post)
+                                }
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                     }
@@ -167,6 +175,7 @@ struct InterestDetailView: View {
             fetchPosts()
         }
     }
+
     
     private func checkFollowStatus() {
         guard let userId = Auth.auth().currentUser?.uid else { return }

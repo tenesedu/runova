@@ -167,17 +167,10 @@ struct PostInterestDetailView: View {
     private func postComment() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         let db = Firestore.firestore()
-        
-        db.collection("users").document(userId).getDocument { snapshot, error in
-            guard let userData = snapshot?.data(),
-                  let userName = userData["name"] as? String,
-                  let userImageUrl = userData["profileImageUrl"] as? String else { return }
             
             let commentData: [String: Any] = [
                 "text": commentText,
                 "userId": userId,
-                "userName": userName,
-                "userImageUrl": userImageUrl,
                 "createdAt": FieldValue.serverTimestamp(),
                 "likesCount": 0
             ]
@@ -192,7 +185,7 @@ struct PostInterestDetailView: View {
                     }
                 }
         }
-    }
+    
     
     private func checkIfLiked() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
