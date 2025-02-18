@@ -17,8 +17,9 @@ struct Comment: Identifiable {
     let createdAt: Date
     let parentId: String?
     let postId: String
-    var replies: [Comment] = []
+    let mentionedUserName: String?
     var likesCount: Int
+    var repliesCount: Int
     var isLiked: Bool = false
     
     init(id: String, data: [String: Any], postId: String) {
@@ -30,6 +31,8 @@ struct Comment: Identifiable {
         self.createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
         self.parentId = data["parentId"] as? String
         self.postId = postId
+        self.mentionedUserName = data["mentionedUserName"] as? String ?? ""
         self.likesCount = data["likesCount"] as? Int ?? 0
+        self.repliesCount = data["repliesCount"] as? Int ?? 0
     }
 }
