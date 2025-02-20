@@ -1,0 +1,189 @@
+// General
+"Profile" = "Profile";
+"Preferences" = "Preferences";
+
+// Home View
+"Hello" = "Hello";
+"Runners Near You" = "Runners Near You";
+"Create Run" = "Create Run";
+"Join Run" = "Join Run";
+"No runners found" = "No runners found";
+"There are no runners in your area yet" = "There are no runners in your area yet";
+
+// Notifications View
+"friendRequest" = "%@ sent you a friend request";
+"friendAccepted" = "%@ accepted your friend request";
+"joinRequest" = "%@ requested to join your run";
+"joinRequestAccepted" = "%@ accepted your request to join their run";
+
+
+// Interest Related
+"followers" = "followers";
+"Following" = "Following";
+"Follow" = "Follow";
+"Popular Interests" = "Popular Interests";
+"See All" = "See All";
+"Discover" = "Discover";
+
+// Feed View
+"Feed" = "Actividad";
+"All" = "All";
+
+// Chat View
+"Chats" = "Chats";
+"No messages yet" = "No messages yet";
+"Yesterday" = "Yesterday";
+
+// Buttons & Actions
+"Save" = "Save";
+"Cancel" = "Cancel";
+"Done" = "Done";
+"Edit" = "Edit";
+"Delete" = "Delete";
+
+// English
+"Organizer" = "Organizer";
+"Participants" = "Participants";
+"Pending Requests" = "Pending Requests";
+"Requested" = "Requested";
+"Request Join" = "Request Join";
+"Edit Run" = "Edit Run";
+"Leave Run" = "Leave Run";
+"Explore..." = "Explore...";
+"All Runners" = "All Runners";
+"Personal Information" = "Personal Information";
+"Gender" = "Gender";
+"City" = "City";
+"Age" = "Age";
+"Average Pace" = "Average Pace";
+"Goals" = "Goals";
+"Interests" = "Interests";
+"Settings" = "Settings";
+"Home" = "Home";
+
+// Run Detail View
+"Delete Run" = "Delete Run";
+"Are you sure you want to delete this run? This action cannot be undone." = "Are you sure you want to delete this run? This action cannot be undone.";
+"Distance" = "Distance";
+"Pace" = "Pace";
+"Terrain" = "Terrain";
+"Error updating join request status: " = "Error updating join request status: ";
+"Error adding user to participants: " = "Error adding user to participants: ";
+"Error leaving run: " = "Error leaving run: ";
+"Error removing join request: " = "Error removing join request: ";
+"Error deleting run: " = "Error deleting run: ";
+"Requested " = "Requested ";
+"Accept" = "Accept";
+
+// Run Creation & Editing
+"Run Details" = "Run Details";
+"Run Name" = "Run Name";
+"Location" = "Location";
+"Description" = "Description";
+"Date and Time" = "Date and Time";
+"When" = "When";
+"Run Specifications" = "Run Specifications";
+"Distance (km)" = "Distance (km)";
+"Max Participants" = "Max Participants";
+"Terrain Type" = "Terrain Type";
+"Create" = "Create";
+"Error" = "Error";
+"You're the organizer" = "You're the organizer";
+
+// Chat Related
+"No messages yet" = "No messages yet";
+"Chats" = "Chats";
+"Group" = "Group";
+"Group Info" = "Group Info";
+"Group Name" = "Group Name";
+"Group Description (Optional)" = "Group Description (Optional)";
+"Members" = "Members";
+"Add Members" = "Add Members";
+"Create Group" = "Create Group";
+"New Message" = "New Message";
+"Type a message..." = "Type a message...";
+"Online" = "Online";
+"Offline" = "Offline";
+"Last seen" = "Last seen";
+"ago" = "ago";
+
+// Map View
+"Map" = "Map";
+"Runners Nearby" = "Runners Nearby";
+"No runners found" = "No runners found";
+"Select a runner to view their profile" = "Select a runner to view their profile";
+"Location Access Required" = "Location Access Required";
+"Please enable location access in Settings to use this feature." = "Please enable location access in Settings to use this feature.";
+"No runners in your area" = "No runners in your area";
+"Try expanding your search radius" = "Try expanding your search radius";
+"%.1f km away" = "%.1f km away";
+"View Profile" = "View Profile";
+
+// Notifications
+"No notifications" = "No notifications";
+"Notifications" = "Notifications";
+"Friend Request" = "Friend Request";
+"Decline" = "Decline";
+"Just now" = "Just now";
+"minute ago" = "minute ago";
+"minutes ago" = "minutes ago";
+"hour ago" = "hour ago";
+"hours ago" = "hours ago";
+"day ago" = "day ago";
+"days ago" = "days ago";
+"week ago" = "week ago";
+"weeks ago" = "weeks ago";
+
+// Settings
+"Account" = "Account";
+"Edit Profile" = "Edit Profile";
+"Privacy" = "Privacy";
+"Preferences" = "Preferences";
+"Notifications" = "Notifications";
+"Location" = "Location";
+"Sign Out" = "Sign Out";
+"Push Notifications" = "Push Notifications";
+"New Messages" = "New Messages";
+"Friend Requests" = "Friend Requests";
+"Run Updates" = "Run Updates";
+"Email Notifications" = "Email Notifications";
+"Weekly Summary" = "Weekly Summary";
+"Special Events" = "Special Events";
+"Notification Settings" = "Notification Settings";
+"Error Saving Settings" = "Error Saving Settings";
+"Location Settings" = "Location Settings";
+"Allow Location Access" = "Allow Location Access";
+"Location Precision" = "Location Precision";
+"High" = "High";
+"Medium" = "Medium";
+"Low" = "Low";
+
+// Connection Requests
+"No Friend Requests" = "No Friend Requests";
+"Friend Requests" = "Friend Requests";
+"Request Sent" = "Request Sent";
+"Request Received" = "Request Received";
+"Accept" = "Accept";
+"Decline" = "Decline";
+"Error accepting request" = "Error accepting request";
+"Error declining request" = "Error declining request";
+"Request accepted" = "Request accepted";
+"Request declined" = "Request declined";
+"You are now friends with" = "You are now friends with";
+"Friend request declined" = "Friend request declined";
+
+// Search
+"Search runners, runs or communities..." = "Search runners, runs or communities...";
+"Search..." = "Search...";
+"Search" = "Search";
+"All" = "All";
+"Runners" = "Runners";
+"Runs" = "Runs";
+"Communities" = "Communities";
+"No results found" = "No results found";
+"Try a different search term" = "Try a different search term";
+
+// New strings
+"No followed interests yet" = "No followed interests yet";
+"FULL" = "FULL";
+"Run is Full" = "Run is Full"; 
