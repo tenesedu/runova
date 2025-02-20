@@ -8,34 +8,46 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             HomeView(selectedTab: $selectedTab, selectedSegment: $selectedSegment)
                 .tabItem {
-                    Image(systemName: "house.fill")
+                    VStack {
+                        Image(systemName: "house.fill")
+                        Text("Home")
+                    }
+                    
                 }
                 .tag(0)
             
             FeedView()
                 .tabItem {
-                    Image(systemName: "map.fill")
+                    Image(systemName: "rectangle.grid.3x2.fill")
+                    Text("Feed")
                 }
                 .tag(1)
             
             RunsView(selectedSegment: $selectedSegment, selectedTab: $selectedTab)
                 .tabItem {
                     Image(systemName: "figure.run")
+                    Text("Runs")
                 }
                 .tag(2)
             
             MapView()
                 .tabItem {
                     Image(systemName: "globe")
+                    Text("Map")
                 }
                 .tag(3)
             
             ChatView()
                 .tabItem {
                     Image(systemName: "message.fill")
+                    Text("Chat")
                 }
                 .tag(4)
         }
         .accentColor(.black)
     }
 } 
+
+#Preview {
+    MainTabView()
+}
