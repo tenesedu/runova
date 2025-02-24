@@ -19,8 +19,6 @@ struct PostInterestDetailView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-           
-            
             Divider()
             
             ScrollView {
@@ -38,7 +36,7 @@ struct PostInterestDetailView: View {
                             .frame(width: 48, height: 48)
                             .clipShape(Circle())
                             
-                            VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 16) {
                                 Text(post.creatorName)
                                     .font(.system(size: 16, weight: .semibold))
                                 Text(post.createdAt.timeAgo())
@@ -51,6 +49,66 @@ struct PostInterestDetailView: View {
                         
                         Text(post.content)
                             .font(.system(size: 16))
+                        
+                        // Post Images
+                        if !post.imagesUrls.isEmpty {
+                            if post.imagesUrls.count == 1 {
+                                // Safely unwrap the first image URL
+                                if let firstImageUrl = post.imagesUrls[0] {
+                                    AsyncImage(url: URL(string: firstImageUrl)) { phase in
+                                        switch phase {
+                                        case .empty:
+                                            ProgressView()
+                                                .frame(maxWidth: .infinity, idealHeight: 300)
+                                                .background(Color.gray.opacity(0.3))
+                                        case .success(let image):
+                                            image
+                                                .resizable()
+                                                .scaledToFit()
+                                                .cornerRadius(8)
+                                        case .failure:
+                                            Image(systemName: "xmark.circle")
+                                                .resizable()
+                                                .scaledToFit()
+                                                .foregroundColor(.red)
+                                        @unknown default:
+                                            EmptyView()
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, maxHeight: 400)
+                                }
+                            } else {
+                                // Multiple images scroll
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(post.imagesUrls.compactMap { $0 }, id: \.self) { url in
+                                            AsyncImage(url: URL(string: url)) { phase in
+                                                switch phase {
+                                                case .empty:
+                                                    ProgressView()
+                                                        .frame(width: 200, height: 200)
+                                                        .background(Color.gray.opacity(0.3))
+                                                case .success(let image):
+                                                    image
+                                                        .resizable()
+                                                        .scaledToFill()
+                                                        .frame(width: 200, height: 200)
+                                                        .cornerRadius(8)
+                                                case .failure:
+                                                    Image(systemName: "xmark.circle")
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                        .foregroundColor(.red)
+                                                @unknown default:
+                                                    EmptyView()
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
+                            }
+                        }
                         
                         HStack(spacing: 24) {
                             Button(action: toggleLike) {
@@ -75,17 +133,24 @@ struct PostInterestDetailView: View {
                     .padding()
                     
                     Divider()
+                    HStack(spacing: 0) {
+                        Text("Responses")
+                            .font(.system(size: 16, weight: .medium))
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    Divider()
                     
                     // Comments
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(comments) { comment in
-                            ThreadedCommentView(comment: comment, comments: comments)
+                            CommentRow(comment: comment)
                                 .padding(.horizontal)
                                 .padding(.vertical, 8)
                         }
                     }
                 }
-                
             }
             
             // Comment Input
@@ -209,7 +274,7 @@ struct PostInterestDetailView: View {
             "creatorImageUrl": "https://example.com/profile.jpg",
             "likesCount": 25,
             "commentsCount": 10,
-            "imageUrl": "https://example.com/post-image.jpg"
+            "imageUrl": "https://static.wikia.nocookie.net/zelda/images/e/e1/Link_Artwork_2_%28The_Minish_Cap%29.png/revision/latest?cb=20120124213342&path-prefix=es"
     ]
     
     let mockPost = Post(id: UUID().uuidString, data: mockPostData)

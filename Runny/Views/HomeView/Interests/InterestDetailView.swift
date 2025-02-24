@@ -145,7 +145,7 @@ struct InterestDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 40)
                     } else {
-                        LazyVStack(spacing: 16) {
+                        LazyVStack(spacing: 0) {
                                                 
                             ForEach(posts) { post in
                                 Button(action: {
@@ -176,6 +176,7 @@ struct InterestDetailView: View {
         }
     }
 
+    
     
     private func checkFollowStatus() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
@@ -282,4 +283,65 @@ struct InterestDetailView: View {
             }
         }
     }
-} 
+}
+
+struct InterestDetailView_Previews: PreviewProvider {
+    static var previews: some View {
+        let mockData: [String: Any] = [
+                  "name": "Technology",
+                  "iconName": "app.fill",
+                  "backgroundImageUrl": "https://www.example.com/background.jpg",
+                  "description": "A place to discuss everything about technology.",
+                  "followerCount": 120,
+                  "createdBy": "user123",
+                  "createdAt": Timestamp(date: Date()), // Using Timestamp for Firestore compatibility
+                  "color": "#0000FF" // Assuming color is passed as a hex string
+              ]
+              
+              let mockInterest = Interest(id: "tech123", data: mockData)
+              
+          
+        
+        let mockPosts: [Post] = [
+            Post(id: "1", data: [
+                "content": "Post about AI",
+                "createdBy": "user123",
+                "creatorName": "John Doe",
+                "creatorImageUrl": "https://www.example.com/user.jpg",
+                "likesCount": 12,
+                "commentsCount": 3,
+                "imageUrl": "https://www.example.com/ai_image.jpg",
+                "createdAt": Date()
+            ]),
+            Post(id: "2", data: [
+                "content": "Post about Space Exploration",
+                "createdBy": "user456",
+                "creatorName": "Jane Doe",
+                "creatorImageUrl": "https://www.example.com/user2.jpg",
+                "likesCount": 45,
+                "commentsCount": 8,
+                "imageUrl": "https://www.example.com/space_image.jpg",
+                "createdAt": Date()
+            ])
+        ]
+        
+        var isFollowing = true
+        var followerCount = 125
+        
+        // The actual view that needs to be previewed
+        InterestDetailView(
+            interest: mockInterest,
+            
+            isFollowing: Binding(get: { isFollowing }, set: { isFollowing = $0 }),
+            followerCount: Binding(get: { followerCount }, set: { followerCount = $0 })
+            //posts: mockPosts
+        )
+        .onAppear {
+            // Simulating post fetch and follow updates
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                isFollowing = true
+                followerCount = 150
+            }
+        }
+    }
+}

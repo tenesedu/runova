@@ -12,7 +12,7 @@ struct Post: Identifiable {
     let creatorImageUrl: String
     let likesCount: Int
     let commentsCount: Int
-    let imageUrl: String?
+    let imagesUrls: [String?]
     
     init(id: String, data: [String: Any]) {
         self.id = id
@@ -25,6 +25,6 @@ struct Post: Identifiable {
         self.creatorImageUrl = data["creatorImageUrl"] as? String ?? ""
         self.likesCount = data["likesCount"] as? Int ?? 0
         self.commentsCount = data["commentsCount"] as? Int ?? 0
-        self.imageUrl = data["imageUrl"] as? String
+        self.imagesUrls = data["imagesUrls"] as? [String] ?? []
     }
 }

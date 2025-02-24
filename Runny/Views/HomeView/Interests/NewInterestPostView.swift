@@ -8,7 +8,7 @@ struct NewInterestPostView: View {
     let interest: Interest
     
     @State private var content: String = ""
-    @State private var selectedImage: UIImage?
+    @State private var selectedImages: [UIImage] = []
     @State private var showingImagePicker = false
     @State private var isLoading = false
     @State private var showAlert = false
@@ -37,9 +37,11 @@ struct NewInterestPostView: View {
                     Button(action: createPost) {
                         Text("Post")
                             .fontWeight(.semibold)
-                            .foregroundColor(!content.isEmpty ? .blue : .gray)
+                            
+                            .foregroundColor(!content.isEmpty || !selectedImages.isEmpty ? .blue : .gray)
                     }
-                    .disabled(content.isEmpty)
+                    
+                    .disabled(content.isEmpty && selectedImages.isEmpty)
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 12)
@@ -95,28 +97,57 @@ struct NewInterestPostView: View {
                     .padding(.top, 12)
                     
                     // Selected Image (if any)
-                    if let selectedImage = selectedImage {
-                        ZStack(alignment: .topTrailing) {
-                            Image(uiImage: selectedImage)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(maxHeight: 200)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .padding(.horizontal)
-                                .padding(.top, 12)
-                            
-                            Button(action: { self.selectedImage = nil }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.white)
-                                    .background(Circle().fill(Color.black.opacity(0.5)))
+                    if !selectedImages.isEmpty {
+                        if selectedImages.count == 1 {
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: selectedImages[0])
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxWidth: .infinity, maxHeight: 300) // Adjust size as needed
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    .padding(.horizontal)
+                                
+                                Button(action: {
+                                    selectedImages.remove(at: 0)
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.white)
+                                        .background(Circle().fill(Color.black.opacity(0.5)))
+                                }
+                                .padding(8)
                             }
-                            .padding(.top, 16)
-                            .padding(.trailing, 24)
+                        }else {
+                            // Display multiple images in a horizontal ScrollView
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(selectedImages, id: \.self) { image in
+                                        ZStack(alignment: .topTrailing) {
+                                            Image(uiImage: image)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(height: 200) // Adjust size as needed
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            
+                                            Button(action: {
+                                                if let index = selectedImages.firstIndex(of: image) {
+                                                    selectedImages.remove(at: index)
+                                                }
+                                            }) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .foregroundColor(.white)
+                                                    .background(Circle().fill(Color.black.opacity(0.5)))
+                                            }
+                                            .padding(8)
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                            .padding(.top, 12)
                         }
                     }
                 }
             }
-            
             Spacer()
             
             // Bottom Toolbar with Post Button
@@ -149,7 +180,7 @@ struct NewInterestPostView: View {
             }
         }
         .sheet(isPresented: $showingImagePicker) {
-            ImagePicker(image: $selectedImage)
+            ImagesPicker(selectedImages: $selectedImages)
         }
         .alert("Error", isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
@@ -206,9 +237,9 @@ struct NewInterestPostView: View {
                         return
                     }
                     
-                    if let image = selectedImage {
-                        uploadImage(image) { imageUrl in
-                            guard let imageUrl = imageUrl else {
+                    if !selectedImages.isEmpty {
+                        uploadImages(selectedImages) { imagesUrls in
+                            guard !imagesUrls.isEmpty else {
                                 isLoading = false
                                 alertMessage = "Error uploading image"
                                 showAlert = true
@@ -225,7 +256,7 @@ struct NewInterestPostView: View {
                                 "creatorImageUrl": userImageUrl,
                                 "likesCount": 0,
                                 "commentsCount": 0,
-                                "imageUrl": imageUrl
+                                "imagesUrls": imagesUrls
                             ]
                             
                             createPostInFirestore(postData)
@@ -262,25 +293,38 @@ struct NewInterestPostView: View {
         }
     }
     
-    private func uploadImage(_ image: UIImage, completion: @escaping (String?) -> Void) {
-        guard let imageData = image.jpegData(compressionQuality: 0.5) else {
-            completion(nil)
-            return
-        }
-        
+    private func uploadImages(_ images: [UIImage], completion: @escaping ([String]) -> Void) {
         let storage = Storage.storage()
-        let storageRef = storage.reference()
-        let imageRef = storageRef.child("post_images/\(UUID().uuidString).jpg")
+        let dispatchGroup = DispatchGroup()
+        var imageUrls: [String] = []
         
-        imageRef.putData(imageData, metadata: nil) { metadata, error in
-            if error != nil {
-                completion(nil)
-                return
+        for image in images {
+            dispatchGroup.enter()
+            guard let imageData = image.jpegData(compressionQuality: 0.5) else {
+                dispatchGroup.leave()
+                continue
             }
             
-            imageRef.downloadURL { url, error in
-                completion(url?.absoluteString)
+            let storageRef = storage.reference()
+            let imageRef = storageRef.child("post_images/\(UUID().uuidString).jpg")
+            
+            imageRef.putData(imageData, metadata: nil) { metadata, error in
+                if error != nil {
+                    dispatchGroup.leave()
+                    return
+                }
+                
+                imageRef.downloadURL { url, error in
+                    if let url = url {
+                        imageUrls.append(url.absoluteString)
+                    }
+                    dispatchGroup.leave()
+                }
             }
+        }
+        
+        dispatchGroup.notify(queue: .main) {
+            completion(imageUrls)
         }
     }
 }
@@ -303,40 +347,4 @@ struct NewInterestPostView: View {
     return NewInterestPostView(interest: mockInterest)
     
 }
-// Image Picker
-struct ImagePicker: UIViewControllerRepresentable {
-    @Binding var image: UIImage?
-    @Environment(\.presentationMode) private var presentationMode
-    
-    func makeUIViewController(context: UIViewControllerRepresentableContext<ImagePicker>) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.delegate = context.coordinator
-        picker.sourceType = .photoLibrary
-        return picker
-    }
-    
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: UIViewControllerRepresentableContext<ImagePicker>) {}
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        let parent: ImagePicker
-        
-        init(_ parent: ImagePicker) {
-            self.parent = parent
-        }
-        
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            if let image = info[.originalImage] as? UIImage {
-                parent.image = image
-            }
-            parent.presentationMode.wrappedValue.dismiss()
-        }
-        
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.presentationMode.wrappedValue.dismiss()
-        }
-    }
-} 
+

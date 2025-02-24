@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 // Image Picker
 struct ImagePicker: UIViewControllerRepresentable {

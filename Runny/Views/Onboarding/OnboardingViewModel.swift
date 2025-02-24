@@ -42,23 +42,27 @@ final class OnboardingViewModel: ObservableObject {
         isUploading = true
         
         if let selectedImage = selectedImage {
-            UserService.shared.uploadProfileImage(selectedImage, userId: userId) { [weak self] imageUrl in
-                guard let self = self else { return }
+            UserService.shared.uploadProfileImage(image: selectedImage, userId: userId) { [weak self] imageUrl, error  in
                 
-                if let imageUrl = imageUrl {
-                    // Save user data with the image URL
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    self.isUploading = false
+                    
+                    if let error = error {
+                        self.alertMessage = "Image upload failed: \(error.localizedDescription)"
+                        self.showAlert = true
+                        return
+                    }
                     self.saveUserProfile(userId: userId, imageUrl: imageUrl)
-                } else {
-                    // Handle case where image upload fails
-                    self.saveUserProfile(userId: userId, imageUrl: nil)
                 }
             }
-        } else {
-            // If no image was selected, proceed with saving user profile without an image
-            self.saveUserProfile(userId: userId, imageUrl: nil)
+        }else {
+            
+            DispatchQueue.main.async{
+                self.isUploading = false
+                self.saveUserProfile(userId: userId, imageUrl: nil)
+            }
         }
-
-
     }
 
     
@@ -67,7 +71,7 @@ final class OnboardingViewModel: ObservableObject {
             "name": onboardingData.name,
             "age": onboardingData.age,
             "username": onboardingData.username,
-            "profileImageUrl": onboardingData.profileImage,
+            "profileImageUrl": imageUrl ?? "",
             "gender": onboardingData.gender,
             "city": onboardingData.city,
             "goals": onboardingData.goals,

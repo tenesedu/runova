@@ -11,7 +11,6 @@ struct PostView: View {
     @FocusState private var isCommentFocused: Bool
     
     var body: some View {
-        
         NavigationLink(destination: PostInterestDetailView(post: post)) {
             VStack(alignment: .leading, spacing: 12) {
                 // User Info Header
@@ -43,7 +42,69 @@ struct PostView: View {
                     Text(post.content)
                         .font(.system(size: 15))
                         .multilineTextAlignment(.leading)
+                    
+                    // Post Images
+                    if !post.imagesUrls.isEmpty {
+                        if post.imagesUrls.count == 1 {
+                            // Safely unwrap the first image URL
+                            if let firstImageUrl = post.imagesUrls[0] {
+                                AsyncImage(url: URL(string: firstImageUrl)) { phase in
+                                    switch phase {
+                                    case .empty:
+                                        ProgressView()
+                                            .frame(maxWidth: .infinity, idealHeight: 300)
+                                            .background(Color.gray.opacity(0.3))
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .scaledToFit()
+                                            .cornerRadius(8)
+                                    case .failure:
+                                        Image(systemName: "xmark.circle")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .foregroundColor(.red)
+                                    @unknown default:
+                                        EmptyView()
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, maxHeight: 400)
+                            }
+                        } else {
+                            // Multiple images scroll
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(post.imagesUrls.compactMap { $0 }, id: \.self) { url in
+                                        AsyncImage(url: URL(string: url)) { phase in
+                                            switch phase {
+                                            case .empty:
+                                                ProgressView()
+                                                    .frame(width: 200, height: 200)
+                                                    .background(Color.gray.opacity(0.3))
+                                            case .success(let image):
+                                                image
+                                                    .resizable()
+                                                    .scaledToFill()
+                                                    .frame(width: 200, height: 200)
+                                                    .cornerRadius(8)
+                                            case .failure:
+                                                Image(systemName: "xmark.circle")
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .foregroundColor(.red)
+                                            @unknown default:
+                                                EmptyView()
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
+                    }
                 }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
                 
                 // Action Buttons
                 HStack(spacing: 24) {
@@ -81,11 +142,6 @@ struct PostView: View {
                 .foregroundColor(.gray.opacity(0.3)),
             alignment: .bottom
         )
-        .buttonStyle(PlainButtonStyle())
-        
-        .sheet(isPresented: $showingCommentSheet) {
-            CommentView(post: post)
-        }
         .onAppear {
             checkIfLiked()
         }
@@ -155,6 +211,8 @@ struct PostView: View {
 }
 
 #Preview {
+    
+    
     let mockPostData: [String: Any] = [
         "content": "This is a mock post about technology and innovation.",
             "interestId": "tech123",
@@ -162,10 +220,10 @@ struct PostView: View {
             "createdAt": Date(),
             "createdBy": "user123",
             "creatorName": "John Doe",
-            "creatorImageUrl": "https://example.com/profile.jpg",
+            "creatorImageUrl": "star.fill",
             "likesCount": 25,
             "commentsCount": 10,
-            "imageUrl": "https://example.com/post-image.jpg"
+            "imageUrl": "https://static.wikia.nocookie.net/zelda/images/e/e1/Link_Artwork_2_%28The_Minish_Cap%29.png/revision/latest?cb=20120124213342&path-prefix=es"
     ]
     
     let mockPost = Post(id: UUID().uuidString, data: mockPostData)
