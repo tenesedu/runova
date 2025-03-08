@@ -9,7 +9,9 @@ struct NewInterestPostView: View {
     
     @State private var content: String = ""
     @State private var selectedImages: [UIImage] = []
+    @State private var selectedPhotoImage: UIImage?
     @State private var showingImagePicker = false
+    @State private var showingCamera = false
     @State private var isLoading = false
     @State private var showAlert = false
     @State private var alertMessage = ""
@@ -23,19 +25,19 @@ struct NewInterestPostView: View {
             VStack(spacing: 0) {
                 HStack {
                     Button(action: { dismiss() }) {
-                        Text("Cancel")
+                        Text(NSLocalizedString("Cancel", comment: ""))
                             .foregroundColor(.gray)
                     }
                     
                     Spacer()
                     
-                    Text("New Thread")
+                    Text(NSLocalizedString("New Thread", comment: ""))
                         .font(.headline)
                     
                     Spacer()
                     
                     Button(action: createPost) {
-                        Text("Post")
+                        Text(NSLocalizedString("Post", comment: ""))
                             .fontWeight(.semibold)
                             
                             .foregroundColor(!content.isEmpty || !selectedImages.isEmpty ? .blue : .gray)
@@ -49,54 +51,39 @@ struct NewInterestPostView: View {
                 Divider()
                     .background(Color.gray.opacity(0.3))
             }
+
+            // User Info Section
+             HStack(alignment: .top, spacing: 12) {
+                // User Profile Image
+                AsyncImage(url: URL(string: userImage)) { image in
+                    image
+                        .resizable()
+                        .scaledToFill()
+                } placeholder: {
+                    Circle().fill(Color.gray.opacity(0.3))
+                }
+                .frame(width: 40, height: 40)
+                .clipShape(Circle())
+                
+                VStack(alignment: .leading) {
+                    // User Name
+                    Text(userName)
+                        .font(.system(size: 15, weight: .semibold))
+                    
+                    // Text Input
+                    TextField(LocalizedStringKey("Start a thread..."), text: $content, axis: .vertical)
+                        .focused($isFocused)
+                        .textInputAutocapitalization(.never)
+                        .frame(minHeight: 50)
+                        // Selected Image (if any)
+                        }
+             }
+             .padding(16)
             
             // Content Area
             ScrollView {
                 VStack(spacing: 0) {
-                    HStack(alignment: .top, spacing: 12) {
-                        // User Profile Image
-                        AsyncImage(url: URL(string: userImage)) { image in
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        } placeholder: {
-                            Circle().fill(Color.gray.opacity(0.3))
-                        }
-                        .frame(width: 40, height: 40)
-                        .clipShape(Circle())
                         
-                        VStack(alignment: .leading, spacing: 2) {
-                            // User Name
-                            Text(userName)
-                                .font(.system(size: 15, weight: .semibold))
-                            
-                            // Text Input
-                            TextField("Start a thread...", text: $content, axis: .vertical)
-                                .focused($isFocused)
-                                .textInputAutocapitalization(.never)
-                                .frame(minHeight: 100)
-                            
-                            // Media Icons
-                            HStack(spacing: 16) {
-                                Button(action: { showingImagePicker = true }) {
-                                    Image(systemName: "photo.on.rectangle")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(.gray)
-                                }
-                                
-                                Button(action: { /* Camera action */ }) {
-                                    Image(systemName: "camera")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(.gray)
-                                }
-                            }
-                            .padding(.top, 8)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 12)
-                    
-                    // Selected Image (if any)
                     if !selectedImages.isEmpty {
                         if selectedImages.count == 1 {
                             ZStack(alignment: .topTrailing) {
@@ -141,14 +128,35 @@ struct NewInterestPostView: View {
                                         }
                                     }
                                 }
-                                .padding(.horizontal)
+                                //.padding(.horizontal)
                             }
-                            .padding(.top, 12)
+                            //.padding(.top, 12)
+                        }
+                    
+                      
+                    }
+                    // Media Icons
+                    HStack(alignment: .firstTextBaseline, spacing: 16) {
+                        Button(action: { showingImagePicker = true }) {
+                            Image(systemName: "photo.on.rectangle")
+                                .font(.system(size: 20))
+                                .foregroundColor(.gray)
+                        }
+                        
+                        Button(action: {  showingCamera = true }) {
+                            Image(systemName: "camera")
+                                .font(.system(size: 20))
+                                .foregroundColor(.gray)
                         }
                     }
-                }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 20)
+                    .padding(.top, 16)
+                } 
+                .padding(.horizontal, 24)
             }
-            Spacer()
+        
+     
             
             // Bottom Toolbar with Post Button
             if isFocused {
@@ -181,6 +189,14 @@ struct NewInterestPostView: View {
         }
         .sheet(isPresented: $showingImagePicker) {
             ImagesPicker(selectedImages: $selectedImages)
+        }
+        .fullScreenCover(isPresented: $showingCamera) {
+            CameraView(isPresented: $showingCamera, image: $selectedPhotoImage)
+                .onDisappear {
+                    if let image = selectedPhotoImage {
+                        selectedImages.append(image)
+                    }
+                }
         }
         .alert("Error", isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
@@ -344,7 +360,7 @@ struct NewInterestPostView: View {
     
     let mockInterest = Interest(id: "1", data: mockInterestData)
     
-    return NewInterestPostView(interest: mockInterest)
+    NewInterestPostView(interest: mockInterest)
     
 }
 
