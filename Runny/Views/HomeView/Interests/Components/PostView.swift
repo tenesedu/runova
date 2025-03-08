@@ -9,143 +9,147 @@ struct PostView: View {
     @State private var showingCommentSheet = false
     @State private var newComment = ""
     @FocusState private var isCommentFocused: Bool
+    @State private var showingImageModal = false
+    @State private var selectedImage: String?
+    let onPostTap: (() -> Void)?
     
     var body: some View {
-        NavigationLink(destination: PostInterestDetailView(post: post)) {
-            VStack(alignment: .leading, spacing: 12) {
-                // User Info Header
-                HStack(spacing: 10) {
-                    AsyncImage(url: URL(string: post.creatorImageUrl)) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } placeholder: {
-                        Circle().fill(Color.gray.opacity(0.3))
-                    }
-                    .frame(width: 40, height: 40)
-                    .clipShape(Circle())
+        VStack(alignment: .leading, spacing: 12) {
+            // User Info Header
+            HStack(spacing: 10) {
+                AsyncImage(url: URL(string: post.creatorImageUrl)) { image in
+                    image
+                        .resizable()
+                        .scaledToFill()
+                } placeholder: {
+                    Circle().fill(Color.gray.opacity(0.3))
+                }
+                .frame(width: 40, height: 40)
+                .clipShape(Circle())
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(post.creatorName)
+                        .font(.system(size: 15, weight: .semibold))
                     
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(post.creatorName)
-                            .font(.system(size: 15, weight: .semibold))
-                        
-                        Text(post.createdAt.timeAgo())
-                            .font(.system(size: 13))
-                            .foregroundColor(.gray)
-                    }
-                    
-                    Spacer()
+                    Text(post.createdAt.timeAgo())
+                        .font(.system(size: 13))
+                        .foregroundColor(.gray)
                 }
                 
-                // Post Content
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(post.content)
-                        .font(.system(size: 15))
-                        .multilineTextAlignment(.leading)
-                    
-                    // Post Images
-                    if !post.imagesUrls.isEmpty {
-                        if post.imagesUrls.count == 1 {
-                            // Safely unwrap the first image URL
-                            if let firstImageUrl = post.imagesUrls[0] {
-                                AsyncImage(url: URL(string: firstImageUrl)) { phase in
+                Spacer()
+            }
+            
+            // Post Content
+            Text(post.content)
+                .font(.system(size: 15))
+                .multilineTextAlignment(.leading)
+            
+            // Post Images
+            if !post.imagesUrls.isEmpty {
+                if post.imagesUrls.count == 1 {
+                    if let firstImageUrl = post.imagesUrls[0] {
+                        AsyncImage(url: URL(string: firstImageUrl)) { phase in
+                            switch phase {
+                            case .empty:
+                                ProgressView()
+                                    .frame(maxWidth: .infinity, idealHeight: 300)
+                                    .background(Color.gray.opacity(0.3))
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFit()
+                                    .cornerRadius(8)
+                                    .onTapGesture {
+                                        selectedImage = firstImageUrl
+                                        showingImageModal = true
+                                    }
+                            case .failure:
+                                Image(systemName: "xmark.circle")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .foregroundColor(.red)
+                            @unknown default:
+                                EmptyView()
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: 400)
+                    }
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(post.imagesUrls.compactMap { $0 }, id: \.self) { url in
+                                AsyncImage(url: URL(string: url)) { phase in
                                     switch phase {
                                     case .empty:
                                         ProgressView()
-                                            .frame(maxWidth: .infinity, idealHeight: 300)
+                                            .frame(width: 200, height: 200)
                                             .background(Color.gray.opacity(0.3))
                                     case .success(let image):
                                         image
                                             .resizable()
-                                            .scaledToFit()
-                                            .cornerRadius(8)
+                                            .scaledToFill()
+                                            .frame(width: 200, height: 200)
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            .onTapGesture {
+                                                selectedImage = url
+                                                showingImageModal = true
+                                            }
                                     case .failure:
                                         Image(systemName: "xmark.circle")
                                             .resizable()
                                             .scaledToFit()
                                             .foregroundColor(.red)
+                                            .frame(width: 200, height: 200)
                                     @unknown default:
                                         EmptyView()
                                     }
                                 }
-                                .frame(maxWidth: .infinity, maxHeight: 400)
-                            }
-                        } else {
-                            // Multiple images scroll
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(post.imagesUrls.compactMap { $0 }, id: \.self) { url in
-                                        AsyncImage(url: URL(string: url)) { phase in
-                                            switch phase {
-                                            case .empty:
-                                                ProgressView()
-                                                    .frame(width: 200, height: 200)
-                                                    .background(Color.gray.opacity(0.3))
-                                            case .success(let image):
-                                                image
-                                                    .resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: 200, height: 200)
-                                                    .cornerRadius(8)
-                                            case .failure:
-                                                Image(systemName: "xmark.circle")
-                                                    .resizable()
-                                                    .scaledToFit()
-                                                    .foregroundColor(.red)
-                                            @unknown default:
-                                                EmptyView()
-                                            }
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal)
                             }
                         }
                     }
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                
-                // Action Buttons
-                HStack(spacing: 24) {
-                    Button(action: toggleLike) {
-                        HStack(spacing: 4) {
-                            Image(systemName: isLiked ? "heart.fill" : "heart")
-                                .foregroundColor(isLiked ? .red : .gray)
-                            Text("\(post.likesCount)")
-                        }
-                    }
-                    
-                    Button(action: {
-                        showingCommentSheet = true
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "bubble.left")
-                            Text("\(post.commentsCount)")
-                        }
-                        .foregroundColor(.gray)
-                    }
-                    
-                    Spacer()
-                }
-                .font(.system(size: 14))
-                .foregroundColor(.gray)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 12)
+            
+            Divider()
+            
+            // Action Buttons
+            HStack(spacing: 24) {
+                Button(action: toggleLike) {
+                    HStack(spacing: 4) {
+                        Image(systemName: isLiked ? "heart.fill" : "heart")
+                            .foregroundColor(isLiked ? .red : .gray)
+                        Text("\(post.likesCount)")
+                    }
+                }
+                
+                Button(action: {
+                    showingCommentSheet = true
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bubble.left")
+                        Text("\(post.commentsCount)")
+                    }
+                    .foregroundColor(.gray)
+                }
+                
+                Spacer()
+            }
+            .font(.system(size: 14))
+            .foregroundColor(.gray)
         }
-        .buttonStyle(PlainButtonStyle())
-        .background(Color(.systemBackground))
-        .overlay(
-            Rectangle()
-                .frame(height: 0.2)
-                .foregroundColor(.gray.opacity(0.3)),
-            alignment: .bottom
-        )
+        .contentShape(Rectangle())
+        .padding(.horizontal)
+        .padding(.vertical, 12)
         .onAppear {
             checkIfLiked()
         }
+        .sheet(isPresented: $showingImageModal) {
+            if let imageUrl = selectedImage {
+                ImageModalView(imageUrl: imageUrl)
+            }
+        }
     }
+    
     private func toggleLike() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         let db = Firestore.firestore()
@@ -210,6 +214,44 @@ struct PostView: View {
     }
 }
 
+struct ImageModalView: View {
+    let imageUrl: String
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            GeometryReader { geometry in
+                AsyncImage(url: URL(string: imageUrl)) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                    case .failure:
+                        Image(systemName: "xmark.circle")
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundColor(.red)
+                    @unknown default:
+                        EmptyView()
+                    }
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
 #Preview {
     
     
@@ -228,7 +270,7 @@ struct PostView: View {
     
     let mockPost = Post(id: UUID().uuidString, data: mockPostData)
     
-    PostView(post: mockPost)
+    PostView(post: mockPost, onPostTap: nil)
     
 }
 

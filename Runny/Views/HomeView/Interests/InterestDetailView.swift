@@ -10,6 +10,7 @@ struct InterestDetailView: View {
     @Binding var followerCount: Int
     @State private var showingCreatePost = false
     @State private var selectedPost: Post?
+
     
     private let headerHeight: CGFloat = 250
     
@@ -146,12 +147,11 @@ struct InterestDetailView: View {
                         .padding(.vertical, 40)
                     } else {
                         LazyVStack(spacing: 0) {
-                                                
+                            
                             ForEach(posts) { post in
-                                Button(action: {
-                                    selectedPost = post
-                                }) {
-                                    PostView(post: post)
+                                NavigationLink(destination: PostInterestDetailView(post: post)) {
+                                    PostView(post: post, onPostTap: nil)
+                                        .padding(.vertical, 8)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                             }
@@ -159,13 +159,8 @@ struct InterestDetailView: View {
                     }
                 }
                 .padding()
+                
             }
-        }
-        .ignoresSafeArea(edges: .top)
-        .navigationBarHidden(true)
-        .refreshable {
-            // Refresh all content
-            await refreshContent()
         }
         .sheet(isPresented: $showingCreatePost) {
             NewInterestPostView(interest: interest)
