@@ -10,16 +10,28 @@ import FirebaseFirestore
 import FirebaseAuth
 
 struct CommentRow: View {
+    
     let comment: Comment
+    
+    @State private var userImageUrl: String? = nil
+    @State private var userName: String? = nil
+    
     
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            AsyncImage(url: URL(string: comment.userImageUrl)) { image in
-                image
-                    .resizable()
-                    .scaledToFill()
-            } placeholder: {
-                Circle().fill(Color.gray.opacity(0.3))
+            AsyncImage(url: URL(string: userImageUrl ?? "")) { phase in
+                switch phase {
+                case .empty:
+                    Circle().fill(Color.gray.opacity(0.3))
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                case .failure:
+                    Circle().fill(Color.gray.opacity(0.3))
+                }
+                
+                
             }
             .frame(width: 32, height: 32)
             .clipShape(Circle())
@@ -27,7 +39,7 @@ struct CommentRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 
                 HStack {
-                    Text(comment.userName)
+                    Text(userName ?? "")
                         .font(.system(size: 14, weight: .semibold))
                     Text(comment.createdAt.timeAgo())
                         .font(.system(size: 12))
@@ -67,6 +79,14 @@ struct CommentRow: View {
                 
         }
         .padding(.vertical, 8)
+        .onAppear {
+            UserManager.shared.getUserData(by: comment.userId) { user in
+                if let user = user {
+                    self.userName = user.name
+                    self.userImageUrl = user.profileImageUrl
+                }
+            }
+        }
     }
 }
 

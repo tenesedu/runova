@@ -57,14 +57,10 @@ struct CommentsView: View {
         let db = Firestore.firestore()
         db.collection("posts").document(post.id)
             .collection("comments")
-            .order(by: "timestamp", descending: false)
+            .order(by: "createdAt", descending: false)
             .addSnapshotListener { snapshot, error in
-                guard let documents = snapshot?.documents else {
-                    print("Error fetching comments: \(error?.localizedDescription ?? "Unknown error")")
-                    return
-                }
-                
-                comments = documents.map { Comment(id: $0.documentID, data: $0.data()) }
+                guard let documents = snapshot?.documents else { return }
+                comments = documents.map { Comment(id: $0.documentID, data: $0.data(), postId: post.id) }
             }
     }
     
@@ -114,47 +110,5 @@ struct CommentsView: View {
     }
 }
 
-struct CommentRow: View {
-    let comment: Comment
+
     
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            // User Profile Image
-            AsyncImage(url: URL(string: comment.userProfileUrl ?? "")) { image in
-                image
-                    .resizable()
-                    .scaledToFill()
-            } placeholder: {
-                Image(systemName: "person.circle.fill")
-                    .foregroundColor(.gray)
-            }
-            .frame(width: 32, height: 32)
-            .clipShape(Circle())
-            
-            VStack(alignment: .leading, spacing: 4) {
-                // User Name and Timestamp
-                HStack {
-                    Text(comment.userName)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    Spacer()
-                    
-                    Text(timeAgo(from: comment.timestamp))
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-                
-                // Comment Content
-                Text(comment.content)
-                    .font(.subheadline)
-            }
-        }
-    }
-    
-    private func timeAgo(from date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
-    }
-} 

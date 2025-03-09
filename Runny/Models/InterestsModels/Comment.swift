@@ -8,7 +8,7 @@
 import Foundation
 import FirebaseFirestore
 
-struct Comment: Identifiable {
+struct Comment: Identifiable, Codable {
     let id: String
     let text: String
     let userId: String
