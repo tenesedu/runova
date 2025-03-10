@@ -4,7 +4,7 @@ import FirebaseFirestore
 
 struct PostInterestDetailView: View {
     let post: Post
-    
+
     @State private var comments: [Comment] = []
     @State private var commentText = ""
     @State private var isLiked = false
@@ -134,7 +134,7 @@ struct PostInterestDetailView: View {
                     
                     Divider()
                     HStack(spacing: 0) {
-                        Text("Responses")
+                        Text(NSLocalizedString("Responses", comment: ""))
                             .font(.system(size: 16, weight: .medium))
                         Spacer()
                     }
@@ -143,9 +143,10 @@ struct PostInterestDetailView: View {
                     Divider()
                     
                     // Comments
+                    
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(comments) { comment in
-                            CommentRow(comment: comment)
+                            CommentRow(comment: comment, postId: post.id)
                                 .padding(.horizontal)
                                 .padding(.vertical, 8)
                         }
@@ -157,12 +158,25 @@ struct PostInterestDetailView: View {
             VStack(spacing: 0) {
                 Divider()
                 HStack(spacing: 12) {
-                    AsyncImage(url: URL(string: UserDefaults.standard.string(forKey: "userProfileImage") ?? "")) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } placeholder: {
-                        Circle().fill(Color.gray.opacity(0.3))
+                    AsyncImage(url: URL(string: UserManager.shared.currentUser?.profileImageUrl ?? "")) { phase in
+                        switch phase {
+                        case .empty:
+                            ProgressView()
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        case .failure:
+                            Circle()
+                                .fill(Color.blue)
+                                .overlay(
+                                    Text(String(UserManager.shared.currentUser?.name.prefix(1) ?? "U"))
+                                        .font(.title)
+                                        .foregroundColor(.white)
+                                    )
+                        }
+                        
+                       
                     }
                     .frame(width: 32, height: 32)
                     .clipShape(Circle())
@@ -186,81 +200,41 @@ struct PostInterestDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("Thread")
         .onAppear {
-            fetchComments()
-            checkIfLiked()
-        }
-    }
-    
-    private func fetchComments() {
-        let db = Firestore.firestore()
-        db.collection("posts").document(post.id)
-            .collection("comments")
-            .order(by: "createdAt", descending: false)
-            .addSnapshotListener { snapshot, error in
-                guard let documents = snapshot?.documents else { return }
-                comments = documents.map { Comment(id: $0.documentID, data: $0.data(), postId: post.id) }
+            CommentService.shared.fetchComments(for: post.id){ fetchedComments in
+                self.comments = fetchedComments
             }
-    }
-
-    private func toggleLike() {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let db = Firestore.firestore()
-        let likeRef = db.collection("posts").document(post.id)
-            .collection("likes").document(userId)
-        
-        if isLiked {
-            // Unlike
-            likeRef.delete()
-            updateLikesCount(increment: false)
-        } else {
-            // Like
-            likeRef.setData([:])
-            updateLikesCount(increment: true)
+            PostService.shared.checkIfPostLiked(postId: post.id) { isLiked in
+                self.isLiked = isLiked
+            }
+            
         }
-        
-        isLiked.toggle()
-    }
-    
-    private func updateLikesCount(increment: Bool) {
-        let db = Firestore.firestore()
-        db.collection("posts").document(post.id).updateData([
-            "likesCount": FieldValue.increment(increment ? Int64(1) : Int64(-1))
-        ])
-        likesCount += increment ? 1 : -1
     }
     
     private func postComment() {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let db = Firestore.firestore()
-            
-            let commentData: [String: Any] = [
-                "text": commentText,
-                "userId": userId,
-                "createdAt": FieldValue.serverTimestamp(),
-                "likesCount": 0
-            ]
-            
-            db.collection("posts").document(post.id)
-                .collection("comments").addDocument(data: commentData) { error in
-                    if error == nil {
-                        db.collection("posts").document(post.id)
-                            .updateData(["commentsCount": FieldValue.increment(Int64(1))])
-                        commentText = ""
-                        isCommentFocused = false
-                    }
-                }
-        }
-    
-    
-    private func checkIfLiked() {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let db = Firestore.firestore()
-        db.collection("posts").document(post.id)
-            .collection("likes").document(userId)
-            .addSnapshotListener { snapshot, error in
-                isLiked = snapshot?.exists ?? false
+     
+        CommentService.shared.addComment(
+              textComment: commentText
+            , userId: UserManager.shared.currentUser?.id ?? ""
+            , parentId: post.id
+            , to: post.id
+            ) { error in
+            if let error = error {
+                print("Error adding comment: \(error.localizedDescription)")
+            } else {
+                self.commentText = ""
+                self.isCommentFocused = false   
             }
+        }
     }
+ 
+
+    private func toggleLike() {
+        PostService.shared.togglePostLike(postId: post.id) { newIsLiked, newLikesCount in
+            self.isLiked = newIsLiked
+            self.likesCount = newLikesCount
+        }
+    }
+    
 } 
 
 #Preview {

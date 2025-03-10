@@ -12,9 +12,19 @@ import FirebaseAuth
 struct CommentRow: View {
     
     let comment: Comment
+    let postId: String
+    
+    @State private var isLiked = false
+    @State private var likesCount: Int
     
     @State private var userImageUrl: String? = nil
     @State private var userName: String? = nil
+    
+    init(comment: Comment, postId: String) {
+        self.comment = comment
+        _likesCount = State(initialValue: comment.likesCount)
+        self.postId = postId
+    }
     
     
     var body: some View {
@@ -50,12 +60,12 @@ struct CommentRow: View {
                 
                 HStack(spacing: 16){
                     Button(action: {
-                        
+                        toggleCommentLike()
                     }){
                         HStack(spacing: 4){
-                            Image(systemName: comment.isLiked ? "heart.fill" : "heart")
-                                .foregroundColor(comment.isLiked ? .red : .gray)
-                            Text("\(comment.likesCount)")
+                            Image(systemName: isLiked ? "heart.fill" : "heart")
+                                .foregroundColor(isLiked ? .red : .gray)
+                            Text("\(likesCount)")
                                 
                         }
                     }
@@ -88,56 +98,63 @@ struct CommentRow: View {
             }
         }
     }
+    
+    private func toggleCommentLike() {
+        CommentService.shared.toggleCommentLike(postId: postId, commentId: comment.id) { newIsLiked, newLikesCount in
+            self.isLiked = newIsLiked
+            self.likesCount = newLikesCount
+        }
+    }
 }
-
-let mockPost = "post123" // ID del post al que pertenecen los comentarios
-
-let mockComment: [Comment] = [
-    Comment(
-        id: "comment1",
-        data: [
-            "text": "Este es un comentario principal.",
-            "userId": "user1",
-            "userName": "iOSDev",
-            "userImageUrl": "https://example.com/profile1.jpg",
-            "createdAt": Timestamp(date: Date()),
-            "parentId": nil, // Es un comentario principal
-            "mentionedUserName": nil,
-            "likesCount": 5
-        ],
-        postId: mockPostId
-    ),
-    Comment(
-        id: "comment2",
-        data: [
-            "text": "@iOSDev Esta es una respuesta a tu comentario.",
-            "userId": "user2",
-            "userName": "Reactivo",
-            "userImageUrl": "https://example.com/profile2.jpg",
-            "createdAt": Timestamp(date: Date()),
-            "parentId": "comment1", // Respuesta al comentario 1
-            "mentionedUserName": "iOSDev",
-            "likesCount": 3
-        ],
-        postId: mockPostId
-    ),
-    Comment(
-        id: "comment3",
-        data: [
-            "text": "Otro comentario principal.",
-            "userId": "user3",
-            "userName": "AppleFan",
-            "userImageUrl": "https://example.com/profile3.jpg",
-            "createdAt": Timestamp(date: Date()),
-            "parentId": nil, // Es un comentario principal
-            "mentionedUserName": nil,
-            "likesCount": 2
-        ],
-        postId: mockPostId
-    )
-]
-
-#Preview {
-    CommentRow(comment: mockComments[0])
-}
-
+//
+//let mockPost = "post123" // ID del post al que pertenecen los comentarios
+//
+//let mockComment: [Comment] = [
+//    Comment(
+//        id: "comment1",
+//        data: [
+//            "text": "Este es un comentario principal.",
+//            "userId": "user1",
+//            "userName": "iOSDev",
+//            "userImageUrl": "https://example.com/profile1.jpg",
+//            "createdAt": Timestamp(date: Date()),
+//            "parentId": nil, // Es un comentario principal
+//            "mentionedUserName": nil,
+//            "likesCount": 5
+//        ],
+//        postId: mockPostId
+//    ),
+//    Comment(
+//        id: "comment2",
+//        data: [
+//            "text": "@iOSDev Esta es una respuesta a tu comentario.",
+//            "userId": "user2",
+//            "userName": "Reactivo",
+//            "userImageUrl": "https://example.com/profile2.jpg",
+//            "createdAt": Timestamp(date: Date()),
+//            "parentId": "comment1", // Respuesta al comentario 1
+//            "mentionedUserName": "iOSDev",
+//            "likesCount": 3
+//        ],
+//        postId: mockPostId
+//    ),
+//    Comment(
+//        id: "comment3",
+//        data: [
+//            "text": "Otro comentario principal.",
+//            "userId": "user3",
+//            "userName": "AppleFan",
+//            "userImageUrl": "https://example.com/profile3.jpg",
+//            "createdAt": Timestamp(date: Date()),
+//            "parentId": nil, // Es un comentario principal
+//            "mentionedUserName": nil,
+//            "likesCount": 2
+//        ],
+//        postId: mockPostId
+//    )
+//]
+//
+//#Preview {
+//   // CommentRow(comment: mockComments[0], postId: String)
+//}
+//

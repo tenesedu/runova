@@ -61,4 +61,98 @@ class CommentService {
                 completion(error)
             }
     }
+    
+    func checkIfCommentLiked(postId: String, commentId: String, completion: @escaping (Bool) -> Void) {
+        guard let userId = UserManager.shared.currentUser?.id else {
+            print("No authenticated user")
+            completion(false)
+            return
+        }
+        db.collection("posts").document(postId)
+            .collection("comments").document(commentId)
+            .collection("likes").document(userId)
+            .addSnapshotListener { snapshot, error in
+                if let error = error {
+                    print("Error checking like status: \(error.localizedDescription)")
+                    completion(false)
+                } else {
+                    completion(snapshot?.exists ?? false)
+                    print("Comment is liked = \(snapshot?.exists ?? false).")
+                }
+            }
+    }
+    
+    func toggleCommentLike(postId: String, commentId: String, completion: @escaping (Bool, Int) -> Void) {
+        guard let userId = UserManager.shared.currentUser?.id else {
+            print("No authenticated user")
+            return
+        }
+        
+        let likeRef = db.collection("posts").document(postId)
+            .collection("comments").document(commentId)
+            .collection("likes").document(userId)
+        
+        let createdAt = Timestamp(date: Date())
+        
+        likeRef.getDocument { (snapshot, error) in
+            let isCurrentlyLiked = snapshot?.exists ?? false
+            
+            if isCurrentlyLiked {
+                // Unlike
+                likeRef.delete { error in
+                    if let error = error {
+                        print("Error removing like from comment: \(error.localizedDescription)")
+                        completion(false, 0)
+                    } else {
+                        self.updateCommentLikesCount(postId: postId, commentId: commentId, increment: false) { newCount in
+                            completion(false, newCount)
+                        }
+                    }
+                }
+            } else {
+                // Like
+                likeRef.setData([
+                    "createdAt": createdAt
+                ]) { error in
+                    if let error = error {
+                        print("Error liking comment: \(error.localizedDescription)")
+                        completion(false, 0)
+                    } else {
+                        self.updateCommentLikesCount(postId: postId, commentId: commentId, increment: true) { newCount in
+                            completion(true, newCount)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func updateCommentLikesCount(postId: String, commentId: String, increment: Bool, completion: @escaping (Int) -> Void) {
+        let commentRef = db.collection("posts").document(postId)
+            .collection("comments").document(commentId)
+        
+        // Actualizamos el contador de likes en Firestore para el comentario
+        commentRef.updateData([
+            "likesCount": FieldValue.increment(increment ? Int64(1) : Int64(-1))
+        ]) { error in
+            if let error = error {
+                print("Error updating comment likes count: \(error)")
+                completion(0)  // Regresamos un contador de 0 si hubo un error
+                return
+            }
+            
+            // Obtener el nuevo conteo de likes del comentario
+            commentRef.getDocument { (document, error) in
+                if let document = document, let likesCount = document.data()?["likesCount"] as? Int {
+                    completion(likesCount)  // Regresamos el nuevo conteo de likes
+                } else {
+                    print("Error fetching updated comment likes count")
+                    completion(0)  // Regresamos 0 si no podemos obtener el nuevo conteo
+                }
+            }
+        }
+    }
+
+    
+ 
 }
