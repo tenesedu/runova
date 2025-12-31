@@ -8,11 +8,33 @@
 import SwiftUI
 
 struct InterestsStep: View {
+    @Binding var interests: [String]
+    let availableInterests = ["Trail Running", "Marathon", "Social Running", "Sprinting"]
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack(spacing: 25) {
+            AnimatedIcon(icon: "heart.fill", namespace: Namespace().wrappedValue)
+            
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 10) {
+                    ForEach(availableInterests, id: \.self) { interest in
+                        InterestChip(interest: interest, isSelected: interests.contains(interest)) {
+                            if interests.contains(interest) {
+                                interests.removeAll { $0 == interest }
+                            } else {
+                                interests.append(interest)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal)
+        }
     }
 }
 
 #Preview {
-    InterestsStep()
+    @State var interests = ["Trail Running", "Marathon", "Social Running", "Sprinting"]
+    
+    InterestsStep(interests: $interests)
 }

@@ -10,14 +10,14 @@ struct FeedView: View {
     @State private var searchText = ""
     
     var filteredPosts: [Post] {
-        let interestFiltered = selectedInterest == nil ? posts : posts.filter { $0.interest == selectedInterest }
+        let interestFiltered = selectedInterest == nil ? posts : posts.filter { $0.interestName == selectedInterest }
         
         if searchText.isEmpty {
             return interestFiltered
         }
         return interestFiltered.filter { post in
             post.content.localizedCaseInsensitiveContains(searchText) ||
-            post.userName.localizedCaseInsensitiveContains(searchText)
+            post.creatorName.localizedCaseInsensitiveContains(searchText)
         }
     }
     
@@ -177,14 +177,14 @@ struct PostCard: View {
     
     init(post: Post) {
         self.post = post
-        self._likesCount = State(initialValue: post.likes)
+        self._likesCount = State(initialValue: post.likesCount)
     }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // User Info
             HStack {
-                AsyncImage(url: URL(string: post.userProfileUrl ?? "")) { image in
+                AsyncImage(url: URL(string: post.creatorImageUrl ?? "")) { image in
                     image
                         .resizable()
                         .scaledToFill()
@@ -196,22 +196,20 @@ struct PostCard: View {
                 .clipShape(Circle())
                 
                 VStack(alignment: .leading) {
-                    Text(post.userName)
+                    Text(post.creatorName)
                         .font(.headline)
-                    Text(post.interest)
+                    Text(post.interestName)
                         .font(.caption)
-                        .foregroundColor(post.interestColor) // Use the interest color
+                        .foregroundColor(Color(.systemGray4))
                 }
                 
                 Spacer()
                 
-                Text(timeAgo(from: post.timestamp))
+                Text(timeAgo(from: post.createdAt))
                     .font(.caption)
                     .foregroundColor(.gray)
             }
-            Text(post.title)
-                .font(.headline)
-                .lineLimit(2)
+           
             // Content
             Text(post.content)
                 .font(.body)
@@ -239,7 +237,7 @@ struct PostCard: View {
                         .onTapGesture {
                             showingComments = true
                         }
-                    Text("\(post.comments)")
+                    Text("\(post.commentsCount)")
                         .foregroundColor(.gray)
                 }
             }
@@ -253,10 +251,10 @@ struct PostCard: View {
             showingDetail = true
         }
         .sheet(isPresented: $showingDetail) {
-            PostDetailView(post: post)
+            //PostDetailView(post: post)
         }
         .sheet(isPresented: $showingComments) {
-            CommentsView(post: post)
+           // CommentsView(post: post)
         }
         .onAppear {
             checkIfLiked()

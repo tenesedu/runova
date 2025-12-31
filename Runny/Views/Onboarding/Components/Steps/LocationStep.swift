@@ -8,11 +8,26 @@
 import SwiftUI
 
 struct LocationStep: View {
+    @Binding var locationEnabled: Bool
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack(spacing: 25) {
+            AnimatedIcon(icon: "location.fill", namespace: Namespace().wrappedValue)
+            
+            Toggle("Enable Location Services", isOn: $locationEnabled)
+                .toggleStyle(SwitchToggleStyle(tint: .purple))
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 15)
+                        .fill(Color(.systemBackground))
+                        .shadow(radius: 5)
+                )
+                .padding(.horizontal)
+        }
     }
 }
 
 #Preview {
-    LocationStep()
+    @State var locationEnabled = false
+    LocationStep(locationEnabled: $locationEnabled)
 }

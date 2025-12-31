@@ -1,0 +1,213 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isParticipant(participants) {
+      return isAuthenticated() && participants.hasAny([request.auth.uid]);
+    }
+    
+    	// Interests
+    function isAdmin(interestId){
+    	return isAuthenticated() && 
+      	request.auth.uid == get(/databases/$(database)/documents/interests/$(interestId)).data.adminId;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || 
+                   (isAuthenticated() && 
+                    request.resource.data.diff(resource.data).affectedKeys()
+                      .hasOnly(['friends']));
+      
+      match /interests/{interest} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // Conversations collection
+    match /conversations/{conversationId} {
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.createdBy;
+      allow read, update: if isAuthenticated() && resource.data.participants.hasAny([request.auth.uid]);
+      
+
+      match /messages/{messageId} {
+        allow read, create: if isParticipant(get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants);
+      }
+    }
+
+    // Connection requests collection
+    match /connectionRequests/{requestId} {
+      function isRequestParticipant() {
+        return resource.data.senderId == request.auth.uid || 
+               resource.data.receiverId == request.auth.uid;
+      }
+      
+      allow read: if isAuthenticated() && isRequestParticipant();
+      
+      allow create: if isAuthenticated() && 
+                   request.resource.data.senderId == request.auth.uid;
+      
+      allow update: if isAuthenticated() && 
+                   isRequestParticipant() && 
+                   request.resource.data.diff(resource.data).affectedKeys()
+                     .hasOnly(['status', 'updatedAt']) && 
+                   request.resource.data.status in ['pending', 'accepted', 'rejected', 'cancelled'];
+      
+      allow delete: if isAuthenticated() && isRequestParticipant();
+    }
+
+    // Interests collection
+  match /interests/{interestId} {
+    allow read: if isAuthenticated(); 
+    allow create: if isAuthenticated(); 
+    allow update: if isAuthenticated() && 
+                  request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followersCount']) ||
+                  isAdmin(interestId);
+    allow delete: if isAdmin(interestId);
+
+    // Followers subcollection
+    match /followers/{userId} {
+    	allow read, update: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+  }
+
+  // Posts collection
+  match /posts/{postId} {
+    function isPostCreator() {
+        return isAuthenticated() && request.auth.uid == resource.data.createdBy;
+    }
+
+    function isFollower(interestId) {
+        return isAuthenticated() && 
+               exists(/databases/$(database)/documents/interests/$(interestId)/followers/$(request.auth.uid));
+    }
+
+    allow read: if isAuthenticated();
+
+    // Updated create rule to check follower status using request data
+    allow create: if isAuthenticated() && 
+                 isFollower(request.resource.data.interestId);
+
+    // Allow updates only for like/comment counts and by post creator
+    allow update: if isAuthenticated() && 
+                 (request.resource.data.diff(resource.data).affectedKeys()
+                    .hasOnly(['likesCount', 'commentsCount']) ||
+                  isPostCreator());
+
+    allow delete: if isPostCreator();
+
+    // Likes subcollection
+    match /likes/{likeId} {
+        allow read: if isAuthenticated();
+        // Allow create if document ID matches user ID
+        allow create: if isAuthenticated() && 
+                     likeId == request.auth.uid;
+        // Allow delete only for user's own like
+        allow delete: if isAuthenticated() && 
+                     likeId == request.auth.uid;
+    }
+
+    // Comments subcollection 
+    match /comments/{commentId} {
+        function isCommentCreator() {
+            return isAuthenticated() && 
+                   request.auth.uid == resource.data.createdBy;
+        }
+
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        // Allow updates for like count and by comment creator
+        allow update: if isAuthenticated() && 
+                     (request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['likesCount']) ||
+                      isCommentCreator());
+        allow delete: if isCommentCreator();
+
+        // Likes subcollection for comments
+        match /likes/{likeId} {
+            allow read: if isAuthenticated();
+            allow create: if isAuthenticated() && 
+                         likeId == request.auth.uid;
+            allow delete: if isAuthenticated() && 
+                         likeId == request.auth.uid;
+        }
+
+        // Replies subcollection
+        match /replies/{replyId} {
+            allow read: if isAuthenticated();
+            allow create: if isAuthenticated();
+            allow update: if isAuthenticated() && 
+                         request.auth.uid == resource.data.createdBy;
+            allow delete: if isAuthenticated() && 
+                         request.auth.uid == resource.data.createdBy;
+        }
+    }
+  }
+
+
+    // Notifications collection
+    match /notifications/{notificationId} {
+      function isReceiver() {
+        return resource.data.receiverId == request.auth.uid;
+      }
+      
+      allow read: if isAuthenticated() && isReceiver();
+      
+      allow create: if isAuthenticated() && 
+                   request.resource.data.keys().hasAll(['type', 'senderId', 'receiverId', 'timestamp', 'read']);
+      
+      allow update: if isAuthenticated() && 
+                   isReceiver() && 
+                   request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      
+      allow delete: if isAuthenticated() && isReceiver();
+    }
+    
+   
+    
+    // Runs collection
+    match /runs/{runId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isOrganizer(runId);
+
+      // JoinRequests subcollection
+      match /joinRequests/{userId} {
+        // Users can create their own join request
+        allow create: if request.auth.uid == userId;
+        allow read: if request.auth.uid == userId || isOrganizer(runId);
+        
+        allow delete: if request.auth.uid == userId 
+
+        // Organizers can update the status of a join request
+        allow update: if isOrganizer(runId) && 
+                     request.resource.data.status in ["accepted", "rejected"];
+
+        // Users can read their own join request
+        // Organizers can read all join requests for their run
+        allow read: if isAuthenticated() && 
+                   (userId == request.auth.uid || isOrganizer(runId));
+      }
+    }
+
+    // Helper function to check if the user is the organizer
+      function isOrganizer(runId) {
+      return isAuthenticated() && 
+             request.auth.uid == get(/databases/$(database)/documents/runs/$(runId)).data.createdBy;
+    }
+  }
+}

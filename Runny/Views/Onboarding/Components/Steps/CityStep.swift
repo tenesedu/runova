@@ -8,11 +8,19 @@
 import SwiftUI
 
 struct CityStep: View {
+    @Binding var city: String
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack(spacing: 25) {
+            AnimatedIcon(icon: "mappin.and.ellipse", namespace: Namespace().wrappedValue)
+            
+            FloatingTextField(title: "City", text: $city)
+                .padding(.horizontal)
+        }
     }
 }
 
 #Preview {
-    CityStep()
+    @State var city = "Madrid"
+    CityStep(city: $city)
 }

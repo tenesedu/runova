@@ -51,7 +51,7 @@ struct OnboardingView: View {
                 Group {
                     switch currentStep {
                     case .personalInfo:
-                        PersonalInfoStep(data: $viewModel.onboardingData, namespace: animationNamespace)
+                        PersonalInfoStep(name: $viewModel.onboardingData.name,age: $viewModel.onboardingData.age, namespace: animationNamespace)
                             .transition(.stepTransition)
                     case .username:
                         UsernameStep(

@@ -1,0 +1,57 @@
+# ================================
+# Runova iOS Project .gitignore
+# ================================
+
+# ==== macOS ====
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ==== Xcode ====
+build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+
+# ==== Swift Package Manager ====
+.build/
+.swiftpm/
+Package.resolved
+
+# ==== CocoaPods ====
+Pods/
+Podfile.lock
+
+# ==== Firebase & Sensitive Configuration ====
+# IMPORTANT: Contains API keys - must not be committed
+GoogleService-Info.plist
+**/GoogleService-Info.plist
+
+# ==== Environment & Secrets ====
+.env
+.env.*
+*.pem
+*.p8
+*.p12
+*.mobileprovision
+*.provisionprofile
+
+# ==== IDE & Editors ====
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# ==== Backup & Duplicate Folders ====
+Runny 2/
+
+# ==== Misc ====
+*.log
+*.tmp
+Thumbs.db

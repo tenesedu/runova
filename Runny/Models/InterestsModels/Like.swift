@@ -11,15 +11,11 @@ import FirebaseFirestore
 struct Like: Identifiable {
     let id: String
     let userId: String
-    let userName: String
-    let userProfileUrl: String?
-    let timestamp: Date
+    let likedAt: Date
     
     init(id: String, data: [String: Any]) {
         self.id = id
         self.userId = data["userId"] as? String ?? ""
-        self.userName = data["userName"] as? String ?? ""
-        self.userProfileUrl = data["userProfileUrl"] as? String
-        self.timestamp = (data["timestamp"] as? Timestamp)?.dateValue() ?? Date()
+        self.likedAt = (data["likedAt"] as? Timestamp)?.dateValue() ?? Date()
     }
 }

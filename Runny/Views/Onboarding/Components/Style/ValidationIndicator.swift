@@ -8,11 +8,14 @@
 import SwiftUI
 
 struct ValidationIndicator: View {
+    var isValid: Bool
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        Image(systemName: isValid ? "checkmark.circle.fill" : "xmark.circle.fill")
+            .foregroundColor(isValid ? .green : .red)
     }
 }
 
 #Preview {
-    ValidationIndicator()
+    ValidationIndicator(isValid: true)
 }

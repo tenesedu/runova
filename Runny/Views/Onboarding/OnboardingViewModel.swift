@@ -13,7 +13,7 @@ import FirebaseFirestore
 // MARK: - Onboarding Data Model
 struct OnboardingData {
     var name: String = ""
-    var age: Int = 18
+    var age: Int? = 18
     var username: String = ""
     var profileImage: UIImage?
     var gender: String = ""

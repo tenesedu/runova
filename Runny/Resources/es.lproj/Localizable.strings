@@ -232,6 +232,12 @@
 "Edit" = "Editar";
 "Delete" = "Eliminar";
 
+// New Post View
+"New Thread" = "Nuevo Hilo";
+"Post" = "Publicar";
+"Start a thread..." = "Iniciar un hilo...";
+"Responses" = "Respuestas";
+
 // Spanish
 
 "Explore..." = "Explorar...";
