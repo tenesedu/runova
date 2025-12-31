@@ -1,7 +1,7 @@
 # Runova (Runny)
 
 <p align="center">
-  <img src="screenshots/logo.png" alt="Runova Logo" width="120"/>
+  <img src="screenshots/logo.jpeg" alt="Runova Logo" width="120"/>
 </p>
 
 <p align="center">
@@ -22,24 +22,17 @@
 
 **Runova** is a native iOS social application designed for runners who want to find training partners, join group runs, and connect with the running community. Built entirely with SwiftUI and powered by Firebase, it provides real-time location tracking, messaging, and social features.
 
-> **Note:** This is a personal project that was discontinued. The code is shared for portfolio purposes and to demonstrate iOS development skills.
+> **Note:** This is a personal project that was discontinued. The code is shared for portfolio purposes.
 
 ---
 
 ## Screenshots
 
 <p align="center">
-  <img src="screenshots/home.png" width="200" alt="Home"/>
+  <img src="screenshots/home_.png" width="200" alt="Home"/>
   <img src="screenshots/map.png" width="200" alt="Map"/>
   <img src="screenshots/runs.png" width="200" alt="Runs"/>
-  <img src="screenshots/profile.png" width="200" alt="Profile"/>
-</p>
-
-<p align="center">
-  <img src="screenshots/onboarding.png" width="200" alt="Onboarding"/>
-  <img src="screenshots/chat.png" width="200" alt="Chat"/>
-  <img src="screenshots/interests.png" width="200" alt="Interests"/>
-  <img src="screenshots/run-detail.png" width="200" alt="Run Detail"/>
+  <img src="screenshots/posts.png" width="200" alt="Profile"/>
 </p>
 
 ---
@@ -221,10 +214,14 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## Author
 
-**Eduardo Tenes**
+**Eduardo Tenés**
 
 - GitHub: [@tenesedu](https://github.com/tenesedu)
 - LinkedIn: [Eduardo Tenes](https://www.linkedin.com/in/eduardoten%C3%A9st/)
+
+## Contributors
+
+**Joaquin Tenés**
 
 ---
 
