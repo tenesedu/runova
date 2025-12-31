@@ -22,7 +22,7 @@
 
 **Runova** is a native iOS social application designed for runners who want to find training partners, join group runs, and connect with the running community. Built entirely with SwiftUI and powered by Firebase, it provides real-time location tracking, messaging, and social features.
 
-> **Note:** This is a personal project that was discontinued. The code is shared for portfolio purposes.
+> **Note:** This is a personal project that was discontinued.
 
 ---
 
@@ -126,7 +126,7 @@ The app follows the **MVVM (Model-View-ViewModel)** pattern:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/runova.git
+   git clone https://github.com/tenesedu/runova.git
    cd runova
    ```
 
